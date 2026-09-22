@@ -25,14 +25,39 @@ public class ServerController : ControllerBase
     [HttpPost("start")]
     public IActionResult StartServer()
     {
-        _processService.StartServer();
-        return Ok(new { message = "Server starting..." });
+        try
+        {
+            var val = _processService.StartServer();
+            bool success = val.Result;
+
+            if (success) // server was successfully started
+            {
+                return Accepted(new { message = "Server starting..." });
+            }
+            else // server is already running
+            {
+                return Conflict(new { conflict = "Server is already running." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new {message = $"Failed to launch the server process: {ex.Message}"});
+        }
     }
 
     [HttpPost("stop")]
     public IActionResult StopServer()
     {
-        _processService.StopServer();
-        return Ok(new { message = "Stop command sent." });
+        var val = _processService.StopServer();
+        bool success = val.Result;
+
+        if (success) // server was successfully stopped
+        {
+            return Accepted(new { message = "Stopping server..." });
+        }
+        else // server isn't running
+        {
+            return Conflict(new { conflict = "Server is not running." });
+        }
     }
 }

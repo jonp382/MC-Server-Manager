@@ -45,12 +45,7 @@ export default function App() {
 
         // Listen for log lines from C# ProcessManager
         connection.on('ReceiveLogLine', (line: string) => {
-          const newLog: LogMessage = {
-            id: Math.random().toString(36).substring(2, 9),
-            text: line,
-            timestamp: new Date().toLocaleTimeString(),
-          };
-          setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
+          ConsoleLog(line);
         });
 
         // Listen for server state changes
@@ -73,10 +68,33 @@ export default function App() {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  const ConsoleLog = (message: string) => {
+    const newLog: LogMessage = {
+      id: Math.random().toString(36).substring(2, 9),
+      text: message,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
+  }
+
   // Command & Action Handlers
   const handleStart = async () => {
     try {
-      await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
+      const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
+      const data = await response.json();
+
+      switch (response.status){
+        case 202: // accepted
+          ConsoleLog("Starting server...")
+          break;
+        case 409:
+          ConsoleLog("[HTTP 409] Server is already started.")
+          break;
+        default:
+          ConsoleLog(`[HTTP ${response.status}] ${data.message}`);
+          break;
+      }
+
     } catch (err) {
       console.error('Error starting server:', err);
     }
@@ -84,7 +102,20 @@ export default function App() {
 
   const handleStop = async () => {
     try {
-      await fetch(`${API_URL}/api/server/stop`, { method: 'POST' });
+      const response = await fetch(`${API_URL}/api/server/stop`, { method: 'POST' });
+      const data = await response.json();
+
+      switch (response.status){
+        case 202: // accepted
+          ConsoleLog("Stopping server...")
+          break;
+        case 409:
+          ConsoleLog("[HTTP 409] Server is not running.")
+          break;
+        default:
+          ConsoleLog(`[HTTP ${response.status}] ${data.message}`);
+          break;
+      }
     } catch (err) {
       console.error('Error stopping server:', err);
     }

@@ -7,9 +7,9 @@ namespace MinecraftServerManager.Services;
 public interface IMinecraftProcessService
 {
     bool IsRunning { get; }
-    Task StartServer();
-    Task StopServer();
-    Task SendCommand(string command);
+    Task<bool> StartServer();
+    Task<bool> StopServer();
+    Task<bool> SendCommand(string command);
     string GetServerStatus();
     event Action<string>? OutputReceived;
 }
@@ -22,9 +22,13 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
     private readonly IHubContext<ConsoleHub> _hubContext = hubContext;
     private string _currentStatus = "Stopped";
 
-    public Task StartServer()
+    public async Task<bool> StartServer()
     {
-        if (IsRunning) return Task.CompletedTask;
+        if (IsRunning) 
+        {
+            UpdateStatus("Running");
+            return false;
+        }
 
         _process = new Process
         {
@@ -56,25 +60,31 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
         UpdateStatus("Running");
 
-        return Task.CompletedTask;
+        return true;
     }
 
-    public async Task SendCommand(string command)
+    public async Task<bool> SendCommand(string command)
     {
         if (IsRunning)
         {
             await _process!.StandardInput.WriteLineAsync(command);
             await _process.StandardInput.FlushAsync();
+
+            return true;
         }
+        return false;
     }
 
-    public async Task StopServer()
+    public async Task<bool> StopServer()
     {
         if (IsRunning)
         {
             await SendCommand("stop");
             UpdateStatus("Stopped");
+            return true;
         }
+        
+        return false;
     }
 
     private void OnProcessExited(object? s, EventArgs e)
