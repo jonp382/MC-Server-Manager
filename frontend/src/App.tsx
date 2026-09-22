@@ -10,6 +10,11 @@ interface LogMessage {
   timestamp: string;
 }
 
+const isServerRunning = (status: string) => {
+  const s = status.toLowerCase();
+  return s === 'running' || s === 'starting';
+};
+
 export default function App() {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -117,14 +122,14 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleStart}
-            disabled={serverStatus !== 'Stopped'}
+            disabled={isServerRunning(serverStatus)}
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-medium rounded-lg text-sm transition cursor-pointer disabled:cursor-not-allowed"
           >
             <Play size={16} /> Start
           </button>
           <button
             onClick={handleStop}
-            disabled={serverStatus === 'Stopped'}
+            disabled={!isServerRunning(serverStatus)}
             className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium rounded-lg text-sm transition cursor-pointer disabled:cursor-not-allowed"
           >
             <Square size={16} /> Stop

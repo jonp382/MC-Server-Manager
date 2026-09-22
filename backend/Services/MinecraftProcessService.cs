@@ -10,6 +10,7 @@ public interface IMinecraftProcessService
     Task StartServer();
     Task StopServer();
     Task SendCommand(string command);
+    string GetServerStatus();
     event Action<string>? OutputReceived;
 }
 
@@ -40,6 +41,8 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
             }
         };
 
+        UpdateStatus("Started");
+
         _process.OutputDataReceived += (sender, args) =>
         {
             if (!string.IsNullOrEmpty(args.Data)) OutputReceived?.Invoke(args.Data);
@@ -50,6 +53,8 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
         _process.Start();
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
+
+        UpdateStatus("Running");
 
         return Task.CompletedTask;
     }
@@ -68,6 +73,7 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
         if (IsRunning)
         {
             await SendCommand("stop");
+            UpdateStatus("Stopped");
         }
     }
 
@@ -89,4 +95,6 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
             await _hubContext.Clients.All.SendAsync("StatusChanged", status);
         });
     }
+
+    public string GetServerStatus() => _currentStatus;
 }
