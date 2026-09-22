@@ -22,6 +22,13 @@ public class ServerController : ControllerBase
         return Ok(new { status });
     }
 
+    [HttpGet("players")]
+    public IActionResult GetPlayers()
+    {
+        var players = _processService.GetOnlinePlayers();
+        return Ok(new { players });
+    }
+
     [HttpPost("start")]
     public IActionResult StartServer()
     {

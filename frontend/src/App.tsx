@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { Play, Square, Terminal, Power } from 'lucide-react';
+import { Play, Square, Terminal, Power, Users, UserCheck } from 'lucide-react';
 
 const API_URL = 'http://localhost:5029'; // Update port to match your dotnet run output
 
@@ -21,6 +21,7 @@ export default function App() {
   const [serverStatus, setServerStatus] = useState<'Stopped' | 'Starting' | 'Running'>('Stopped');
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [commandInput, setCommandInput] = useState('');
+  const [players, setPlayers] = useState<string[]>([]);
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +77,31 @@ export default function App() {
     };
     setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
   }
+
+  // fetch players on page load
+  useEffect(() => {
+    fetch(`${API_URL}/api/server/players`)
+    .then((res) => res.json())
+    .then((data) => setPlayers(data.players || []))
+    .catch((err) => console.error("Error fetching player list:", err));
+  }, []);
+
+  // react to SignalR events relating to players
+  useEffect(() => {
+    if (!connection) return;
+
+    connection.on("PlayerJoined", (username: string) => {
+      setPlayers((prev) => [...new Set([...prev, username])]);
+    });
+
+    connection.on("PlayerLeft", (username: string) => {
+      setPlayers((prev) => prev.filter((p) => p !== username));
+    });
+
+    connection.on("PlayerListUpdated", (newList: string[]) => {
+      setPlayers(newList);
+    });
+    }, [connection]);
 
   // Command & Action Handlers
   const handleStart = async () => {
@@ -215,6 +241,37 @@ export default function App() {
             Send
           </button>
         </form>
+
+        {/* Online Players Sidebar (Takes 1 column) */}
+        <main className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <Users size={18} className="text-emerald-400" /> Online Players
+            </h2>
+            <span className="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full font-mono">
+              {players.length}
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {players.length === 0 ? (
+              <p className="text-xs text-slate-500 italic">No players online.</p>
+            ) : (
+              players.map((player) => (
+                <div key={player} className="flex items-center gap-2.5 p-2 bg-slate-950/50 border border-slate-800/80 rounded-lg text-sm text-slate-200">
+                  {/* Player avatar using Visage API */}
+                  <img
+                    src={`https://visage.surgeplay.com/face/24/${player}`}
+                    alt={player}
+                    className="w-6 h-6 rounded bg-slate-800"
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
+                  <span className="font-mono text-xs font-medium">{player}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </main>
       </main>
     </div>
   );

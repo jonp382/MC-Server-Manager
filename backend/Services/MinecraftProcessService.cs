@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using MinecraftServerManager.Hubs;
 
@@ -11,6 +13,7 @@ public interface IMinecraftProcessService
     Task<bool> StopServer();
     Task<bool> SendCommand(string command);
     string GetServerStatus();
+    IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
 }
 
@@ -21,6 +24,10 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
     public event Action<string>? OutputReceived;
     private readonly IHubContext<ConsoleHub> _hubContext = hubContext;
     private string _currentStatus = "Stopped";
+
+    private readonly ConcurrentDictionary<string, byte> _onlinePlayers = new();
+    private static readonly Regex JoinRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+joined the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex LeaveRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+left the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public async Task<bool> StartServer()
     {
@@ -47,10 +54,7 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
         UpdateStatus("Started");
 
-        _process.OutputDataReceived += (sender, args) =>
-        {
-            if (!string.IsNullOrEmpty(args.Data)) OutputReceived?.Invoke(args.Data);
-        };
+        _process.OutputDataReceived += OnOutputDataReceived;
 
         _process.Exited += OnProcessExited;
 
@@ -62,6 +66,44 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
         return true;
     }
+
+    private void OnOutputDataReceived(object s, DataReceivedEventArgs e)
+    {
+        if(string.IsNullOrEmpty(e.Data)) return;
+
+        Task.Run(async() =>
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveLogLine", e.Data);
+
+            var joinMatch = JoinRegex.Match(e.Data);
+            if (joinMatch.Success)
+            {
+                string username = joinMatch.Groups[1].Value;
+                Console.WriteLine($"[DEBUG] Detected player join: {username}");
+
+                if(_onlinePlayers.TryAdd(username, 0))
+                {
+                    await _hubContext.Clients.All.SendAsync("PlayerJoined", username);
+                }
+                return;
+            }
+
+            var leaveMatch = LeaveRegex.Match(e.Data);
+            if (leaveMatch.Success)
+            {
+                string username = leaveMatch.Groups[1].Value;
+                Console.WriteLine($"[DEBUG] Detected player leave: {username}");
+
+                if (_onlinePlayers.TryRemove(username, out _))
+                {
+                    await _hubContext.Clients.All.SendAsync("PlayerLeft", username);
+                }
+                return;
+            }
+        });
+    }
+
+    public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
 
     public async Task<bool> SendCommand(string command)
     {
@@ -83,17 +125,19 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
             UpdateStatus("Stopped");
             return true;
         }
-        
+
         return false;
     }
 
     private void OnProcessExited(object? s, EventArgs e)
     {
+        _onlinePlayers.Clear();
         UpdateStatus("Stopped");
 
         Task.Run(async() =>
         {
             await _hubContext.Clients.All.SendAsync("ReceiveLogLine", "[SYSTEM] Process has exited.");
+            await _hubContext.Clients.All.SendAsync("PlayerListUpdated", Array.Empty<string>());
         });
     }
 
