@@ -116,6 +116,12 @@ export default function App() {
               {isConnected ? 'Online' : 'Disconnected'}
             </span>
           </p>
+          <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+            Server Status: 
+            <span className={isConnected ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+              {serverStatus}
+            </span>
+          </p>
         </div>
 
         {/* Start / Stop Actions */}

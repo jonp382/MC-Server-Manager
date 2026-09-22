@@ -19,7 +19,7 @@ public class ServerController : ControllerBase
     public IActionResult GetStatus()
     {
         var status = _processService.GetServerStatus();
-        return Ok(new { isRunning = _processService.IsRunning });
+        return Ok(new { status });
     }
 
     [HttpPost("start")]
