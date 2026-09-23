@@ -78,6 +78,14 @@ export default function App() {
     setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
   }
 
+  // fetch server status on page load and reset the start/stop buttons
+  useEffect(() => {
+    fetch(`${API_URL}/api/server/status`)
+    .then((res) => res.json())
+    .then((data) => setServerStatus(data.status))
+    .catch((err) => console.error("Error fetching server status:", err));
+  }, []);
+
   // fetch players on page load
   useEffect(() => {
     fetch(`${API_URL}/api/server/players`)
