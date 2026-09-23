@@ -16,13 +16,25 @@ const isServerRunning = (status: string) => {
 };
 
 export default function App() {
+  // signalR connection
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+
+  // whether the UI is connected to the server
   const [isConnected, setIsConnected] = useState(false);
+
+  // the server's current status
   const [serverStatus, setServerStatus] = useState<'Stopped' | 'Starting' | 'Running'>('Stopped');
+  
+  // all the log messages
   const [logs, setLogs] = useState<LogMessage[]>([]);
+
+  // the command input string
   const [commandInput, setCommandInput] = useState('');
+
+  // the list of current players
   const [players, setPlayers] = useState<string[]>([]);
   
+  // used to scroll the log window
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
   // establish SignalR connection on component mount
