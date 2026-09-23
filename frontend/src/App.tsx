@@ -25,7 +25,7 @@ export default function App() {
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. Establish SignalR connection on component mount
+  // establish SignalR connection on component mount
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/console`)
@@ -35,7 +35,7 @@ export default function App() {
     setConnection(newConnection);
   }, []);
 
-  // 2. Start connection and register listeners
+  // start connection and register listeners
   useEffect(() => {
     if (!connection) return;
 
@@ -64,7 +64,7 @@ export default function App() {
     };
   }, [connection]);
 
-  // 3. Auto-scroll terminal to bottom when new logs arrive
+  // auto-scroll terminal to bottom when new logs arrive
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
@@ -111,7 +111,7 @@ export default function App() {
     });
     }, [connection]);
 
-  // Command & Action Handlers
+  // command & action Handlers
   const handleStart = async () => {
     try {
       const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
