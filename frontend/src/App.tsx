@@ -37,6 +37,11 @@ export default function App() {
   // used to scroll the log window
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
+  // command history for up/down arrow
+  const [history, setHistory] = useState<string[]>([]); // the list of commands
+  const [historyIndex, setHistoryIndex] = useState<number>(-1); // which previous command is selected
+  const [tempInput, setTempInput] = useState<string>(''); // the current input
+
   // establish SignalR connection on component mount
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
@@ -172,10 +177,49 @@ export default function App() {
     if (!commandInput.trim() || !connection) return;
 
     try {
+      // send command to back end
       await connection.invoke('SendServerCommand', commandInput);
+
+      // add command to history
+      setHistory((prev) => (prev[prev.length - 1] === commandInput ? prev : [...prev, commandInput]));
+
       setCommandInput('');
+      setHistoryIndex(-1);
+      setTempInput('');
     } catch (err) {
-      console.error('Error sending command:', err);
+      ConsoleLog(`Error sending command ${commandInput}`)
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (history.length === 0) return;
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault(); // prevents cursor moving to start of input field
+
+      // save current unsent input draft before entering history navigation
+      if (historyIndex === -1) {
+        setTempInput(commandInput);
+      }
+
+      const nextIndex = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
+      setHistoryIndex(nextIndex);
+      setCommandInput(history[nextIndex]);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault(); 
+
+      if (historyIndex === -1) return;
+
+      const nextIndex = historyIndex + 1;
+
+      if (nextIndex >= history.length) {
+        // reached bottom of history, restore saved draft
+        setHistoryIndex(-1);
+        setCommandInput(tempInput);
+      } else {
+        setHistoryIndex(nextIndex);
+        setCommandInput(history[nextIndex]);
+      }
     }
   };
 
@@ -250,6 +294,7 @@ export default function App() {
             onChange={(e) => setCommandInput(e.target.value)}
             disabled={!isConnected}
             placeholder="Type server command (e.g. list, say Hello)..."
+            onKeyDown={handleKeyDown}
             style={{ color: '#ffffff', backgroundColor: 'transparent' }}
             className="flex-1 bg-transparent text-sm font-mono text-slate-100 focus:outline-none px-2 py-1 placeholder:text-slate-600 disabled:opacity-50"
           />
