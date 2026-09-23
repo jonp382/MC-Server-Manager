@@ -239,6 +239,7 @@ export default function App() {
             onChange={(e) => setCommandInput(e.target.value)}
             disabled={!isConnected}
             placeholder="Type server command (e.g. list, say Hello)..."
+            style={{ color: '#ffffff', backgroundColor: 'transparent' }}
             className="flex-1 bg-transparent text-sm font-mono text-slate-100 focus:outline-none px-2 py-1 placeholder:text-slate-600 disabled:opacity-50"
           />
           <button
