@@ -250,7 +250,7 @@ export default function App() {
           </button>
         </form>
 
-        {/* Online Players Sidebar (Takes 1 column) */}
+        {/* Online Players Sidebar*/}
         <main className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
