@@ -15,6 +15,36 @@ const isServerRunning = (status: string) => {
   return s === 'running' || s === 'starting';
 };
 
+// helper func to determine text color based on Minecraft log format
+const getLogLineStyle = (text: string): React.CSSProperties => {
+  if (
+    text.includes('ERROR]:') ||
+    text.startsWith('[SYSTEM ERROR]') ||
+    text.startsWith('[COMMAND ERROR]')
+  ) {
+    return { color: '#f43f5e', fontWeight: 600 }; // Rose-500 Red
+  }
+
+  if (text.includes('WARN]:') || text.includes('WARNING')) {
+    return { color: '#fbbf24', fontWeight: 600 }; // Amber-400 Yellow
+  }
+
+  if (text.includes('joined the game') || text.includes('left the game')) {
+    return { color: '#34d399', fontWeight: 600 }; // Emerald-400 Green
+  }
+
+  if (text.startsWith('[SYSTEM]')) {
+    return { color: '#22d3ee', fontStyle: 'italic' }; // Cyan-400 Blue
+  }
+
+  if (text.includes('INFO]:')) {
+    return { color: '#e2e8f0' }; // Slate-200 Off-White
+  }
+
+  return { color: '#94a3b8' }; // Slate-400 Neutral Gray
+};
+
+
 export default function App() {
   // signalR connection
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
@@ -136,18 +166,18 @@ export default function App() {
 
       switch (response.status){
         case 202: // accepted
-          ConsoleLog("Starting server...")
+          ConsoleLog("[SYSTEM] Starting server...")
           break;
         case 409:
-          ConsoleLog("[HTTP 409] Server is already started.")
+          ConsoleLog("[SYSTEM] [HTTP 409] Server is already started.")
           break;
         default:
-          ConsoleLog(`[HTTP ${response.status}] ${data.message}`);
+          ConsoleLog(`[SYSTEM] [HTTP ${response.status}] ${data.message}`);
           break;
       }
 
     } catch (err) {
-      console.error('Error starting server:', err);
+      console.error('[SYSTEM] Error starting server:', err);
     }
   };
 
@@ -158,17 +188,17 @@ export default function App() {
 
       switch (response.status){
         case 202: // accepted
-          ConsoleLog("Stopping server...")
+          ConsoleLog("[SYSTEM] Stopping server...")
           break;
         case 409:
-          ConsoleLog("[HTTP 409] Server is not running.")
+          ConsoleLog("[SYSTEM] [HTTP 409] Server is not running.")
           break;
         default:
-          ConsoleLog(`[HTTP ${response.status}] ${data.message}`);
+          ConsoleLog(`[SYSTEM] [HTTP ${response.status}] ${data.message}`);
           break;
       }
     } catch (err) {
-      console.error('Error stopping server:', err);
+      console.error('[SYSTEM] Error stopping server:', err);
     }
   };
 
@@ -277,8 +307,15 @@ export default function App() {
           ) : (
             logs.map((log) => (
               <div key={log.id} className="leading-relaxed hover:bg-slate-800/40 px-1 rounded flex gap-3">
-                <span className="text-slate-500 select-none">{log.timestamp}</span>
-                <span className="text-slate-200 whitespace-pre-wrap">{log.text}</span>
+                <span className="text-slate-500 select-none shrink-0">
+                  {log.timestamp}
+                </span>
+                <span 
+                    className="whitespace-pre-wrap break-all"
+                    style={getLogLineStyle(log.text)}
+                  >
+                  {log.text}
+                </span>
               </div>
             ))
           )}
