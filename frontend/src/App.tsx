@@ -212,7 +212,6 @@ export default function App() {
       <main className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
         <div className="bg-slate-900/80 px-4 py-2.5 border-b border-slate-800 text-xs text-slate-400 font-mono flex justify-between items-center">
           <span>LIVE CONSOLE OUTPUT</span>
-          <span>Status: <strong className="text-emerald-400">{serverStatus}</strong></span>
         </div>
 
         {/* Scrollable Logs */}
