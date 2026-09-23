@@ -268,12 +268,12 @@ export default function App() {
               players.map((player) => (
                 <div key={player} className="flex items-center gap-2.5 p-2 bg-slate-950/50 border border-slate-800/80 rounded-lg text-sm text-slate-200">
                   {/* Player avatar using Visage API */}
-                  <img
+                  {/* <img
                     src={`https://visage.surgeplay.com/face/24/${player}`}
                     alt={player}
                     className="w-6 h-6 rounded bg-slate-800"
                     onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                  />
+                  /> */}
                   <span className="font-mono text-xs font-medium">{player}</span>
                 </div>
               ))
