@@ -18,7 +18,7 @@ const isServerRunning = (status: string) => {
 // helper func to determine text color based on Minecraft log format
 const getLogLineStyle = (text: string): React.CSSProperties => {
   if (
-   isErrorLog(text)
+    isErrorLog(text)
   ) {
     return { color: '#f43f5e', fontWeight: 600 }; // Rose-500 Red
   }
@@ -64,7 +64,7 @@ export default function App() {
 
   // the server's current status
   const [serverStatus, setServerStatus] = useState<'Stopped' | 'Starting' | 'Running'>('Stopped');
-  
+
   // all the log messages
   const [logs, setLogs] = useState<LogMessage[]>([]);
 
@@ -73,14 +73,14 @@ export default function App() {
 
   // the list of current players
   const [players, setPlayers] = useState<string[]>([]);
-  
+
   // used to scroll the log window
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
   // log window filtering
   const [logFilter, setLogFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
 
- 
+
 
   // filter counts
   const counts = {
@@ -159,17 +159,17 @@ export default function App() {
   // fetch server status on page load and reset the start/stop buttons
   useEffect(() => {
     fetch(`${API_URL}/api/server/status`)
-    .then((res) => res.json())
-    .then((data) => setServerStatus(data.status))
-    .catch((err) => console.error("Error fetching server status:", err));
+      .then((res) => res.json())
+      .then((data) => setServerStatus(data.status))
+      .catch((err) => console.error("Error fetching server status:", err));
   }, []);
 
   // fetch players on page load
   useEffect(() => {
     fetch(`${API_URL}/api/server/players`)
-    .then((res) => res.json())
-    .then((data) => setPlayers(data.players || []))
-    .catch((err) => console.error("Error fetching player list:", err));
+      .then((res) => res.json())
+      .then((data) => setPlayers(data.players || []))
+      .catch((err) => console.error("Error fetching player list:", err));
   }, []);
 
   // react to SignalR events relating to players
@@ -187,7 +187,7 @@ export default function App() {
     connection.on("PlayerListUpdated", (newList: string[]) => {
       setPlayers(newList);
     });
-    }, [connection]);
+  }, [connection]);
 
   // command & action Handlers
   const handleStart = async () => {
@@ -195,7 +195,7 @@ export default function App() {
       const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
       const data = await response.json();
 
-      switch (response.status){
+      switch (response.status) {
         case 202: // accepted
           ConsoleLog("[SYSTEM] Starting server...")
           break;
@@ -217,7 +217,7 @@ export default function App() {
       const response = await fetch(`${API_URL}/api/server/stop`, { method: 'POST' });
       const data = await response.json();
 
-      switch (response.status){
+      switch (response.status) {
         case 202: // accepted
           ConsoleLog("[SYSTEM] Stopping server...")
           break;
@@ -267,7 +267,7 @@ export default function App() {
       setHistoryIndex(nextIndex);
       setCommandInput(history[nextIndex]);
     } else if (e.key === 'ArrowDown') {
-      e.preventDefault(); 
+      e.preventDefault();
 
       if (historyIndex === -1) return;
 
@@ -293,13 +293,13 @@ export default function App() {
             <Terminal className="text-emerald-400" /> Minecraft Server Console
           </h1>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-            SignalR Status: 
+            SignalR Status:
             <span className={isConnected ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
               {isConnected ? 'Online' : 'Disconnected'}
             </span>
           </p>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-            Server Status: 
+            Server Status:
             <span className={isConnected ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
               {serverStatus}
             </span>
@@ -335,44 +335,40 @@ export default function App() {
         <div className="flex items-center gap-1.5 font-mono text-xs">
           <button
             onClick={() => setLogFilter('ALL')}
-            className={`px-2.5 py-0.5 rounded transition ${
-              logFilter === 'ALL'
-                ? 'bg-slate-700 text-white font-bold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
+            className={`px-2.5 py-0.5 rounded transition ${logFilter === 'ALL'
+              ? 'bg-slate-700 text-white font-bold'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
           >
             ALL <span className="opacity-70">({counts.ALL})</span>
           </button>
 
           <button
             onClick={() => setLogFilter('INFO')}
-            className={`px-2.5 py-0.5 rounded transition ${
-              logFilter === 'INFO'
-                ? 'bg-sky-950 text-sky-300 border border-sky-800 font-bold'
-                : 'text-slate-400 hover:text-sky-300 hover:bg-slate-800'
-            }`}
+            className={`px-2.5 py-0.5 rounded transition ${logFilter === 'INFO'
+              ? 'bg-sky-950 text-sky-300 border border-sky-800 font-bold'
+              : 'text-slate-400 hover:text-sky-300 hover:bg-slate-800'
+              }`}
           >
             INFO <span className="opacity-70">({counts.INFO})</span>
           </button>
 
           <button
             onClick={() => setLogFilter('WARN')}
-            className={`px-2.5 py-0.5 rounded transition ${
-              logFilter === 'WARN'
-                ? 'bg-amber-950 text-amber-300 border border-amber-800 font-bold'
-                : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
-            }`}
+            className={`px-2.5 py-0.5 rounded transition ${logFilter === 'WARN'
+              ? 'bg-amber-950 text-amber-300 border border-amber-800 font-bold'
+              : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+              }`}
           >
             WARN <span className="opacity-70">({counts.WARN})</span>
           </button>
 
           <button
             onClick={() => setLogFilter('ERROR')}
-            className={`px-2.5 py-0.5 rounded transition ${
-              logFilter === 'ERROR'
-                ? 'bg-rose-950 text-rose-300 border border-rose-800 font-bold'
-                : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
-            }`}
+            className={`px-2.5 py-0.5 rounded transition ${logFilter === 'ERROR'
+              ? 'bg-rose-950 text-rose-300 border border-rose-800 font-bold'
+              : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
+              }`}
           >
             ERROR <span className="opacity-70">({counts.ERROR})</span>
           </button>
