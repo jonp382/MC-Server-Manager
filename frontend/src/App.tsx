@@ -67,6 +67,37 @@ export default function App() {
   // used to scroll the log window
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
+  // log window filtering
+  const [logFilter, setLogFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
+
+  const isErrorLog = (text: string) =>
+    text.includes('ERROR]:') ||
+    text.startsWith('[SYSTEM ERROR]') ||
+    text.startsWith('[COMMAND ERROR]') ||
+    text.includes('Exception in thread');
+
+  const isWarnLog = (text: string) =>
+    text.includes('WARN]:') || text.includes('WARNING');
+
+  const isInfoLog = (text: string) =>
+    !isErrorLog(text) && !isWarnLog(text);
+
+  // filter counts
+  const counts = {
+    ALL: logs.length,
+    INFO: logs.filter((l) => isInfoLog(l.text)).length,
+    WARN: logs.filter((l) => isWarnLog(l.text)).length,
+    ERROR: logs.filter((l) => isErrorLog(l.text)).length,
+  };
+
+  // the actual log filter function
+  const filteredLogs = logs.filter((log) => {
+    if (logFilter === 'ERROR') return isErrorLog(log.text);
+    if (logFilter === 'WARN') return isWarnLog(log.text);
+    if (logFilter === 'INFO') return isInfoLog(log.text);
+    return true; // 'ALL'
+  });
+
   // command history for up/down arrow
   const [history, setHistory] = useState<string[]>([]); // the list of commands
   const [historyIndex, setHistoryIndex] = useState<number>(-1); // which previous command is selected
@@ -300,20 +331,66 @@ export default function App() {
           <span>LIVE CONSOLE OUTPUT</span>
         </div>
 
+        {/* Filter Buttons */}
+        <div className="flex items-center gap-1.5 font-mono text-xs">
+          <button
+            onClick={() => setLogFilter('ALL')}
+            className={`px-2.5 py-0.5 rounded transition ${
+              logFilter === 'ALL'
+                ? 'bg-slate-700 text-white font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            ALL <span className="opacity-70">({counts.ALL})</span>
+          </button>
+
+          <button
+            onClick={() => setLogFilter('INFO')}
+            className={`px-2.5 py-0.5 rounded transition ${
+              logFilter === 'INFO'
+                ? 'bg-sky-950 text-sky-300 border border-sky-800 font-bold'
+                : 'text-slate-400 hover:text-sky-300 hover:bg-slate-800'
+            }`}
+          >
+            INFO <span className="opacity-70">({counts.INFO})</span>
+          </button>
+
+          <button
+            onClick={() => setLogFilter('WARN')}
+            className={`px-2.5 py-0.5 rounded transition ${
+              logFilter === 'WARN'
+                ? 'bg-amber-950 text-amber-300 border border-amber-800 font-bold'
+                : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+            }`}
+          >
+            WARN <span className="opacity-70">({counts.WARN})</span>
+          </button>
+
+          <button
+            onClick={() => setLogFilter('ERROR')}
+            className={`px-2.5 py-0.5 rounded transition ${
+              logFilter === 'ERROR'
+                ? 'bg-rose-950 text-rose-300 border border-rose-800 font-bold'
+                : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
+            }`}
+          >
+            ERROR <span className="opacity-70">({counts.ERROR})</span>
+          </button>
+        </div>
+
         {/* Scrollable Logs */}
         <div className="flex-1 p-4 font-mono text-xs sm:text-sm overflow-y-auto space-y-1 max-h-[60vh] min-h-[400px]">
-          {logs.length === 0 ? (
-            <div className="text-slate-600 italic">No console logs received yet. Click 'Start' to launch the process...</div>
+          {filteredLogs.length === 0 ? (
+            <div className="text-slate-600 italic">
+              {logs.length === 0
+                ? "No console logs received yet. Click 'Start' to launch the process..."
+                : `No logs found matching filter '${logFilter}'.`}
+            </div>
           ) : (
-            logs.map((log) => (
+            filteredLogs.map((log) => (
               <div key={log.id} className="leading-relaxed hover:bg-slate-800/40 px-1 rounded flex gap-3">
-                <span className="text-slate-500 select-none shrink-0">
-                  {log.timestamp}
-                </span>
-                <span 
-                    className="whitespace-pre-wrap break-all"
-                    style={getLogLineStyle(log.text)}
-                  >
+                <span className="text-slate-500 select-none shrink-0">{log.timestamp}</span>
+                <span className="whitespace-pre-wrap break-all" style={getLogLineStyle(log.text)}>
                   {log.text}
                 </span>
               </div>
