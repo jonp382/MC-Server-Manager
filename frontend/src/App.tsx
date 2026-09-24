@@ -18,14 +18,12 @@ const isServerRunning = (status: string) => {
 // helper func to determine text color based on Minecraft log format
 const getLogLineStyle = (text: string): React.CSSProperties => {
   if (
-    text.includes('ERROR]:') ||
-    text.startsWith('[SYSTEM ERROR]') ||
-    text.startsWith('[COMMAND ERROR]')
+   isErrorLog(text)
   ) {
     return { color: '#f43f5e', fontWeight: 600 }; // Rose-500 Red
   }
 
-  if (text.includes('WARN]:') || text.includes('WARNING')) {
+  if (isWarnLog(text)) {
     return { color: '#fbbf24', fontWeight: 600 }; // Amber-400 Yellow
   }
 
@@ -37,12 +35,24 @@ const getLogLineStyle = (text: string): React.CSSProperties => {
     return { color: '#22d3ee', fontStyle: 'italic' }; // Cyan-400 Blue
   }
 
-  if (text.includes('INFO]:')) {
+  if (isInfoLog(text)) {
     return { color: '#e2e8f0' }; // Slate-200 Off-White
   }
 
   return { color: '#94a3b8' }; // Slate-400 Neutral Gray
 };
+
+const isErrorLog = (text: string) =>
+  text.includes('ERROR]:') ||
+  text.startsWith('[SYSTEM ERROR]') ||
+  text.startsWith('[COMMAND ERROR]') ||
+  text.includes('Exception in thread');
+
+const isWarnLog = (text: string) =>
+  text.includes('WARN]:') || text.includes('WARNING');
+
+const isInfoLog = (text: string) =>
+  !isErrorLog(text) && !isWarnLog(text);
 
 
 export default function App() {
@@ -70,17 +80,7 @@ export default function App() {
   // log window filtering
   const [logFilter, setLogFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
 
-  const isErrorLog = (text: string) =>
-    text.includes('ERROR]:') ||
-    text.startsWith('[SYSTEM ERROR]') ||
-    text.startsWith('[COMMAND ERROR]') ||
-    text.includes('Exception in thread');
-
-  const isWarnLog = (text: string) =>
-    text.includes('WARN]:') || text.includes('WARNING');
-
-  const isInfoLog = (text: string) =>
-    !isErrorLog(text) && !isWarnLog(text);
+ 
 
   // filter counts
   const counts = {
