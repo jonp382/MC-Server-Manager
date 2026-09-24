@@ -92,6 +92,39 @@ export default function App() {
       .catch((err) => console.error("Error fetching player list:", err));
   }, []);
 
+  const handleRetrieveLogs = async () => {
+    try {
+      // Replace with your actual backend endpoint URL
+      const response = await fetch(`${API_URL}/api/server/logs`);
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      const json = await response.json();
+      const rawLogs: string[] = json.logs || [];
+      
+      const parsedLogs: LogMessage[] = rawLogs.map((logText, index) => ({
+        id: `${Date.now()}-${index}`,
+        text: logText,
+        timestamp: new Date().toLocaleTimeString(),
+      }));
+      
+      // update state with fetched logs
+      setLogs(parsedLogs);
+    } catch (err) {
+      console.error('Failed to retrieve logs:', err);
+     
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          text: `[SYSTEM ERROR] Failed to fetch historical logs: ${err}`,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+    }
+  }
+
   return (
     <div className="bg-slate-950 text-slate-100 p-6 flex flex-col font-sans overflow-hidden">
       <Header
@@ -108,6 +141,7 @@ export default function App() {
           connection={connection}
           isConnected={isConnected}
           onCommandError={(errText) => setLogs((prev) => [...prev, { id: Math.random().toString(36).substring(2, 9), text: `[COMMAND ERROR] ${errText}`, timestamp: new Date().toLocaleTimeString() }])}
+          onRetrieveLogs={handleRetrieveLogs}
         />
 
         <PlayerList players={players} />

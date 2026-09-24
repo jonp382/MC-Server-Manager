@@ -17,6 +17,7 @@ interface TerminalConsoleProps {
     isConnected: boolean;
     onCommandError: (errorMessage: string) => void;
     onClearLogs?: () => void;
+    onRetrieveLogs: () => void;
 }
 
 export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
@@ -26,6 +27,7 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     isConnected,
     onCommandError,
     onClearLogs,
+    onRetrieveLogs,
 }) => {
     const [logFilter, setLogFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
     const terminalEndRef = useRef<HTMLDivElement | null>(null);
@@ -103,6 +105,16 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                             ERROR <span className="opacity-70">({counts.ERROR})</span>
                         </button>
                     </div>
+                </div>
+
+                <div>
+                    <button
+                        onClick={onRetrieveLogs}
+                        title="Sync Logs"
+                        className="text-xs text-slate-500 hover:text-slate-300 transition flex items-center gap-1"
+                    >
+                        <RefreshCw size={12} /> Sync Logs
+                    </button>
                 </div>
 
                 {/* Clear Output Action & Server Status Summary */}

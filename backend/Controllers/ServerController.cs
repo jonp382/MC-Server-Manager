@@ -22,6 +22,13 @@ public class ServerController : ControllerBase
         return Ok(new { status });
     }
 
+    [HttpGet("logs")]
+    public IActionResult GetLogs()
+    {
+        var logs = _processService.GetRecentLogs();
+        return Ok(new { logs });
+    }
+
     [HttpGet("players")]
     public IActionResult GetPlayers()
     {

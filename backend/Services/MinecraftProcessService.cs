@@ -15,6 +15,8 @@ public interface IMinecraftProcessService
     string GetServerStatus();
     IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
+
+    IEnumerable<string> GetRecentLogs();
 }
 
 public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMinecraftProcessService
@@ -29,6 +31,8 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
     private static readonly Regex JoinRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+joined the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex LeaveRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+left the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Queue<string> _logs = new();
+    private static readonly int LogsToStore = 500;
     public async Task<bool> StartServer()
     {
         if (IsRunning) 
@@ -73,6 +77,13 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
         Task.Run(async() =>
         {
+
+            if(_logs.Count > LogsToStore)
+            {
+                _logs.Dequeue();
+            }
+            _logs.Enqueue(e.Data);
+
             await _hubContext.Clients.All.SendAsync("ReceiveLogLine", e.Data);
 
             var joinMatch = JoinRegex.Match(e.Data);
@@ -101,6 +112,11 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
                 return;
             }
         });
+    }
+
+    public IEnumerable<string> GetRecentLogs()
+    {
+        return _logs;
     }
 
     public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
