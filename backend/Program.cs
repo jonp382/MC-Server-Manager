@@ -8,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<LogWatcherService>();
+builder.Services.AddSingleton<MinecraftProcessService>();
 
 // register signalR 
 builder.Services.AddSignalR();
@@ -42,7 +44,7 @@ app.UseAuthorization();
 
 // end points
 app.MapControllers();
-app.MapHub<ConsoleHub>("/hubs/console");
+app.MapHub<ConsoleHub>("/hubs/ConsoleHub");
 
 // signalR
 var processService = app.Services.GetRequiredService<IMinecraftProcessService>();

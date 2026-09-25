@@ -1,8 +1,11 @@
 using System;
 using Microsoft.AspNetCore.Mvc;
 using MinecraftServerManager.Services;
+using System.Net;
 
 namespace MinecraftServerManager.Controllers;
+
+public record CommandRequest(string Command);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -36,42 +39,45 @@ public class ServerController : ControllerBase
         return Ok(new { players });
     }
 
-    [HttpPost("start")]
-    public IActionResult StartServer()
+    [HttpPost("command")]
+    public async Task<IActionResult> SendCommand([FromBody] CommandRequest req)
     {
         try
         {
-            var val = _processService.StartServer();
-            bool success = val.Result;
-
-            if (success) // server was successfully started
-            {
-                return Accepted(new { message = "Server starting..." });
-            }
-            else // server is already running
-            {
-                return Conflict(new { conflict = "Server is already running." });
-            }
+            string response = await _processService.SendCommand(req.Command);
+            return Ok(new {success = true, response});
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new {message = $"Failed to launch the server process: {ex.Message}"});
+            return StatusCode(500, new {success = false, error = ex.Message});
+        }
+    }
+
+    [HttpPost("start")]
+    public async Task<IActionResult> StartServer()
+    {
+        try
+        {
+            bool result = await _processService.StartServer();
+            return Accepted(new { status = "Server started as new process" });
+        }
+        catch(Exception ex)
+        {
+            return StatusCode(500, new { error = $"Failed to start server: {ex.Message}" });
         }
     }
 
     [HttpPost("stop")]
-    public IActionResult StopServer()
+    public async Task<IActionResult> StopServer()
     {
-        var val = _processService.StopServer();
-        bool success = val.Result;
-
-        if (success) // server was successfully stopped
+        try
         {
-            return Accepted(new { message = "Stopping server..." });
+            bool result = await _processService.StopServer();
+            return Accepted(new {status = "Server stopped via RCON"});
         }
-        else // server isn't running
+        catch (Exception ex)
         {
-            return Conflict(new { conflict = "Server is not running." });
+            return StatusCode(500, new { error = $"Failed to stop server: {ex.Message}" });
         }
     }
 }

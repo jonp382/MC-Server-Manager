@@ -46,7 +46,7 @@ export default function App() {
   // establish SignalR connection on component mount
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/console`)
+      .withUrl(`${API_URL}/hubs/ConsoleHub`)
       .withAutomaticReconnect()
       .build();
 

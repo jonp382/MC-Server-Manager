@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using CoreRCON;
 using Microsoft.AspNetCore.SignalR;
 using MinecraftServerManager.Hubs;
 
@@ -8,10 +11,10 @@ namespace MinecraftServerManager.Services;
 
 public interface IMinecraftProcessService
 {
-    bool IsRunning { get; }
+    bool IsRunning {get; set; }
     Task<bool> StartServer();
     Task<bool> StopServer();
-    Task<bool> SendCommand(string command);
+    Task<string> SendCommand(string command);
     string GetServerStatus();
     IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
@@ -21,8 +24,7 @@ public interface IMinecraftProcessService
 
 public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMinecraftProcessService
 {
-    private Process? _process;
-    public bool IsRunning => _process != null && !_process.HasExited;
+    public bool IsRunning {get; set; } = false;
     public event Action<string>? OutputReceived;
     private readonly IHubContext<ConsoleHub> _hubContext = hubContext;
     private string _currentStatus = "Stopped";
@@ -33,41 +35,47 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
     private static readonly Queue<string> _logs = new();
     private static readonly int LogsToStore = 500;
+
+    // todo: make these controllable by the server manager instead
+    private const string ServerIp = "127.0.0.1";
+    private const ushort RconPort = 25575;
+    private const ushort QueryPort = 25565;
+    private const string RconPassword = "test_password";
+
     public async Task<bool> StartServer()
     {
+        string ServerDir = @"/home/jonny/Games/Minecraft Servers/Test Server";
         if (IsRunning) 
         {
             UpdateStatus("Running");
             return false;
         }
 
-        _process = new Process
-        {
-            StartInfo = new ProcessStartInfo
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        { // windows untested
+            Process.Start(new ProcessStartInfo
             {
-                FileName = @"java",
-                WorkingDirectory = @"/home/jonny/Games/Minecraft Servers/Test Server",
-                Arguments = "-Xmx2G -Xms1G -jar server.jar nogui",
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                FileName = "cmd.exe",
+                Arguments = "/c start \"Minecraft Server\" java -Xmx4G -Xms2G -jar server.jar nogui",
+                WorkingDirectory = ServerDir,
+                UseShellExecute = true
+            });
+        }
+        else
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "setsid",
+                Arguments = "xterm -e \"java -Xmx4G -Xms2G -jar server.jar nogui\"",
+                WorkingDirectory = ServerDir,
                 UseShellExecute = false,
-                CreateNoWindow = true
-            }
-        };
+                CreateNoWindow = true // todo: how to hide the xterm window, this field does nothing
+            };
 
-        UpdateStatus("Started");
-
-        _process.OutputDataReceived += OnOutputDataReceived;
-
-        _process.Exited += OnProcessExited;
-
-        _process.Start();
-        _process.BeginOutputReadLine();
-        _process.BeginErrorReadLine();
-
-        UpdateStatus("Running");
-
+            Process.Start(psi);
+        }
+        Debug.WriteLine($"Process started successfully.");
+        IsRunning = true;
         return true;
     }
 
@@ -121,16 +129,11 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
     public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
 
-    public async Task<bool> SendCommand(string command)
+   public async Task<string> SendCommand(string command)
     {
-        if (IsRunning)
-        {
-            await _process!.StandardInput.WriteLineAsync(command);
-            await _process.StandardInput.FlushAsync();
-
-            return true;
-        }
-        return false;
+        using var rcon = new RCON(IPAddress.Parse(ServerIp), RconPort, RconPassword);
+        await rcon.ConnectAsync();
+        return await rcon.SendCommandAsync(command);
     }
 
     public async Task<bool> StopServer()
@@ -139,6 +142,7 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
         {
             await SendCommand("stop");
             UpdateStatus("Stopped");
+            IsRunning = false;
             return true;
         }
 

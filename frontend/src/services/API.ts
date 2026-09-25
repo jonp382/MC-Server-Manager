@@ -6,10 +6,13 @@ export const startServer = async (appendLog: (msg: string) => void) => {
     const data = await response.json();
 
     switch (response.status) {
-      case 202:
+      case 200: // OK
         appendLog("[SYSTEM] Starting server...");
         break;
-      case 409:
+      case 202: // ACCEPTED
+        appendLog("[SYSTEM] Starting server...");
+        break;
+      case 409: // CONFLICT
         appendLog("[SYSTEM] [HTTP 409] Server is already started.");
         break;
       default:
