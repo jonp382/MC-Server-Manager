@@ -12,7 +12,6 @@ export interface LogMessage {
 
 interface TerminalConsoleProps {
     logs: LogMessage[];
-    serverStatus: string;
     connection: signalR.HubConnection | null;
     isConnected: boolean;
     onCommandError: (errorMessage: string) => void;
@@ -22,7 +21,6 @@ interface TerminalConsoleProps {
 
 export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     logs,
-    serverStatus,
     connection,
     isConnected,
     onCommandError,
@@ -119,7 +117,6 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
 
                 {/* Clear Output Action & Server Status Summary */}
                 <div className="flex items-center gap-3">
-                    {onClearLogs && (
                         <button
                             onClick={onClearLogs}
                             title="Clear Console Output"
@@ -127,10 +124,6 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                         >
                             <RefreshCw size={12} /> Clear
                         </button>
-                    )}
-                    <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-                        Status: <strong className="text-emerald-400">{serverStatus}</strong>
-                    </span>
                 </div>
             </div>
 

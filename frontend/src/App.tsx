@@ -27,6 +27,10 @@ export default function App() {
     setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
   };
 
+  const onClearLogs = () => {
+    setLogs([]);
+  };
+
   // establish SignalR connection on component mount
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
@@ -137,10 +141,10 @@ export default function App() {
       <div className="gap-6 flex-1 min-h-0">
         <TerminalConsole
           logs={logs}
-          serverStatus={serverStatus}
           connection={connection}
           isConnected={isConnected}
           onCommandError={(errText) => setLogs((prev) => [...prev, { id: Math.random().toString(36).substring(2, 9), text: `[COMMAND ERROR] ${errText}`, timestamp: new Date().toLocaleTimeString() }])}
+          onClearLogs={onClearLogs}
           onRetrieveLogs={handleRetrieveLogs}
         />
 
