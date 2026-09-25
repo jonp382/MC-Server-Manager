@@ -1,11 +1,14 @@
 import React from 'react';
 import { Play, Square } from 'lucide-react';
+import { SettingsModal, ServerSettings } from './SettingsModal';
 
 interface HeaderProps {
     serverStatus: string;
     isConnected: boolean;
     onStart: () => void;
     onStop: () => void;
+    settings: ServerSettings;
+    onSaveSettings: (newSettings: ServerSettings) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,6 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
     isConnected,
     onStart,
     onStop,
+    settings,
+    onSaveSettings,
 }) => {
     const isRunning = serverStatus === 'Running';
     const isStopped = serverStatus === 'Stopped';
@@ -56,6 +61,10 @@ export const Header: React.FC<HeaderProps> = ({
                     <Square size={16} fill="currentColor" />
                     Stop Server
                 </button>
+
+                {/* settings button  */}
+                <SettingsModal settings={settings} onSave={onSaveSettings} />
+        
             </div>
         </header>
     );

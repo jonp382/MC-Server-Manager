@@ -5,8 +5,9 @@ import { Header } from './components/Header';
 import { PlayerList } from './components/PlayerList';
 import { TerminalConsole, LogMessage } from './components/TerminalConsole';
 import { startServer, stopServer } from './services/API';
+import { ServerSettings } from './components/SettingsModal';
 
-const API_URL = 'http://localhost:5029'; // Update port to match your dotnet run output
+const API_URL = 'http://localhost:5029';
 
 export default function App() {
   // signalR connection
@@ -16,6 +17,17 @@ export default function App() {
   const [serverStatus, setServerStatus] = useState<'Stopped' | 'Starting' | 'Running'>('Stopped');
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [players, setPlayers] = useState<string[]>([]);
+
+  const [serverSettings, setServerSettings] = useState<ServerSettings>(() => {
+    const saved = localStorage.getItem('mc_server_settings');
+    return saved ? JSON.parse(saved) : { serverIp: '127.0.0.1', queryPort: 25565, rconPort: 25575 };
+  });
+
+  const handleSaveSettings = (newSettings: ServerSettings) => {
+    setServerSettings(newSettings);
+    localStorage.setItem('mc_server_settings', JSON.stringify(newSettings));
+    
+  };
 
   // append system/console logs
   const appendLog = (message: string) => {
@@ -136,6 +148,8 @@ export default function App() {
         isConnected={isConnected}
         onStart={() => startServer(appendLog)}
         onStop={() => stopServer(appendLog)}
+        settings={serverSettings}
+        onSaveSettings={handleSaveSettings}
       />
 
       <div className="gap-6 flex-1 min-h-0">
