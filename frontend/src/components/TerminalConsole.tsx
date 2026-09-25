@@ -52,17 +52,18 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     });
 
     return (
-        <main className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl h-full min-h-0">
-            {/* Header & Filter Control Bar */}
+        <div className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl h-full min-h-0">
+            {/* title */}
             <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
                     <span className="text-xs text-slate-400 font-mono flex items-center gap-1.5 font-semibold">
                         <Terminal size={14} className="text-emerald-400" />
                         LIVE CONSOLE
                     </span>
-
-                    {/* Filter Buttons */}
-                    <div className="flex items-center gap-1.5 font-mono text-xs">
+            </div>
+            
+            {/* Button row */}
+            <div>
+                    <div className="flex items-center gap-3 font-mono text-xs">
                         <button
                             onClick={() => setLogFilter('ALL')}
                             className={`px-2 py-0.5 rounded transition ${logFilter === 'ALL'
@@ -105,7 +106,8 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                     </div>
                 </div>
 
-                <div>
+                {/* sync and clear log buttons */}
+                <div className="flex items-center gap-3 font-mono text-xs">
                     <button
                         onClick={onRetrieveLogs}
                         title="Sync Logs"
@@ -113,11 +115,8 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                     >
                         <RefreshCw size={12} /> Sync Logs
                     </button>
-                </div>
 
-                {/* Clear Output Action & Server Status Summary */}
-                <div className="flex items-center gap-3">
-                        <button
+                    <button
                             onClick={onClearLogs}
                             title="Clear Console Output"
                             className="text-xs text-slate-500 hover:text-slate-300 transition flex items-center gap-1"
@@ -125,9 +124,9 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                             <RefreshCw size={12} /> Clear
                         </button>
                 </div>
-            </div>
 
-            {/* Scrollable Terminal Stream */}
+
+            {/* Scrollable Terminal */}
             <div className="flex-1 p-4 font-mono text-xs sm:text-sm overflow-y-auto space-y-1 max-h-[60vh] min-h-[400px] bg-slate-950/40">
                 {filteredLogs.length === 0 ? (
                     <div className="text-slate-600 italic">
@@ -162,6 +161,6 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
                 isConnected={isConnected}
                 onCommandError={onCommandError}
             />
-        </main>
+        </div>
     );
 };
