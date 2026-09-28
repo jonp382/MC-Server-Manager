@@ -29,21 +29,17 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
     private string _currentStatus = "Stopped";
 
     private readonly ConcurrentDictionary<string, byte> _onlinePlayers = new();
-    private static readonly Regex JoinRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+joined the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex LeaveRegex = new(@"\b([A-Za-z0-9_]{2,16})\s+left the game\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Queue<string> _logs = new();
     private static readonly int LogsToStore = 500;
 
     // todo: make these controllable by the server manager instead
     private const string ServerIp = "127.0.0.1";
     private const ushort RconPort = 25575;
-    private const ushort QueryPort = 25565;
     private const string RconPassword = "test_password";
+    private const string ServerDir = @"/home/jonny/Games/Minecraft Servers/Test Server";
 
     public async Task<bool> StartServer()
     {
-        string ServerDir = @"/home/jonny/Games/Minecraft Servers/Test Server";
+        
         if (IsRunning) 
         {
             UpdateStatus("Running");
@@ -78,53 +74,16 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
         return true;
     }
 
-    private void OnOutputDataReceived(object s, DataReceivedEventArgs e)
-    {
-        if(string.IsNullOrEmpty(e.Data)) return;
-
-        Task.Run(async() =>
-        {
-
-            if(_logs.Count > LogsToStore)
-            {
-                _logs.Dequeue();
-            }
-            _logs.Enqueue(e.Data);
-
-            await _hubContext.Clients.All.SendAsync("ReceiveLogLine", e.Data);
-
-            var joinMatch = JoinRegex.Match(e.Data);
-            if (joinMatch.Success)
-            {
-                string username = joinMatch.Groups[1].Value;
-                Console.WriteLine($"[DEBUG] Detected player join: {username}");
-
-                if(_onlinePlayers.TryAdd(username, 0))
-                {
-                    await _hubContext.Clients.All.SendAsync("PlayerJoined", username);
-                }
-                return;
-            }
-
-            var leaveMatch = LeaveRegex.Match(e.Data);
-            if (leaveMatch.Success)
-            {
-                string username = leaveMatch.Groups[1].Value;
-                Console.WriteLine($"[DEBUG] Detected player leave: {username}");
-
-                if (_onlinePlayers.TryRemove(username, out _))
-                {
-                    await _hubContext.Clients.All.SendAsync("PlayerLeft", username);
-                }
-                return;
-            }
-        });
-    }
-
     public IEnumerable<string> GetRecentLogs()
     {
-        return _logs;
+        var logFilePath = $"{ServerDir}/logs/latest.log";
+        var fileLogs = File.Exists(logFilePath) ? File.ReadLines(logFilePath) : []; // everything in log file
+
+        var recentLogs = fileLogs.Skip(Math.Max(0, fileLogs.Count() - LogsToStore)); // skip everything but latest X lines
+
+        return recentLogs;
     }
+    
 
     public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
 
