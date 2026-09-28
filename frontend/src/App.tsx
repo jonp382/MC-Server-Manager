@@ -170,6 +170,17 @@ export default function App() {
     }
   }
 
+  // Query the backend every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchServerStatus();
+      fetchCurrentPlayers();
+    }, 15000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="bg-slate-950 text-slate-100 p-6 flex flex-col font-sans overflow-hidden">
       <Header
