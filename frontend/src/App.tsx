@@ -104,7 +104,7 @@ export default function App() {
 
       // Log the JSON data to the console
       const data = await response.json();
-      console.info(`Returned JSON:`, data);
+      console.info(`Server status JSON:`, data);
 
       setServerStatus(data.isOnline ? 'Running' : 'Stopped');
     } catch (err) {
@@ -113,13 +113,28 @@ export default function App() {
     }
   };
 
+  const fetchCurrentPlayers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/server/players`);
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      // Log the JSON data to the console
+      const data = await response.json();
+      const players : string[] = data.onlinePlayers;
+      console.info(`Current Players JSON:`, players);
+
+      setPlayers(players);
+    } catch (err) {
+      console.error("Error fetching server status:", err);
+      setPlayers([]);
+    }
+  };
+
   useEffect(() => {
     fetchServerStatus();
-
-    fetch(`${API_URL}/api/server/players`)
-      .then((res) => res.json())
-      .then((data) => setPlayers(data.players || []))
-      .catch((err) => console.error("Error fetching player list:", err));
+    fetchCurrentPlayers();
   }, []);
 
   const handleRetrieveLogs = async () => {

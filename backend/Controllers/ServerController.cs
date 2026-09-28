@@ -26,7 +26,7 @@ public class ServerController : ControllerBase
     {
         try
         {
-            var status = await _queryService.GetServerStatusAsync();
+            var status = await _queryService.QueryServerAsync();
             return Ok(new { status.IsOnline });
         }
         catch (Exception ex)
@@ -43,10 +43,17 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("players")]
-    public IActionResult GetPlayers()
+    public async Task<IActionResult> GetPlayers()
     {
-        var players = _processService.GetOnlinePlayers();
-        return Ok(new { players });
+        try
+        {
+            var status = await _queryService.QueryServerAsync();
+            return Ok(new { status.OnlinePlayers });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 
     [HttpPost("command")]

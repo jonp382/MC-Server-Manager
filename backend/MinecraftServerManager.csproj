@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="CoreRCON" Version="5.4.2" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="MineStat" Version="3.1.2" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
