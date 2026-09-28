@@ -170,12 +170,12 @@ export default function App() {
     }
   }
 
-  // Query the backend every 15 seconds
+  // Query the backend every 3 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchServerStatus();
       fetchCurrentPlayers();
-    }, 15000);
+    }, 3000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
