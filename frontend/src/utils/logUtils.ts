@@ -14,9 +14,7 @@ export const isInfoLog = (text: string) =>
 
 // helper func to determine text color based on Minecraft log format
 export const getLogLineStyle = (text: string): React.CSSProperties => {
-    if (
-        isErrorLog(text)
-    ) {
+    if (isErrorLog(text)) {
         return { color: '#f43f5e', fontWeight: 600 }; // Rose-500 Red
     }
 
@@ -30,6 +28,10 @@ export const getLogLineStyle = (text: string): React.CSSProperties => {
 
     if (text.startsWith('[SYSTEM]')) {
         return { color: '#22d3ee', fontStyle: 'italic' }; // Cyan-400 Blue
+    }
+
+    if (text.includes('[RCON Listener') || text.includes('[RCON Client')) {
+        return { color: '#6b7280', fontWeight: 600 }; // Dimmer Grey
     }
 
     if (isInfoLog(text)) {
