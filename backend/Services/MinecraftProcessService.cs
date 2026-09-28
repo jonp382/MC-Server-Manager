@@ -15,7 +15,6 @@ public interface IMinecraftProcessService
     Task<bool> StartServer();
     Task<bool> StopServer();
     Task<string> SendCommand(string command);
-    string GetServerStatus();
     IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
 
@@ -169,6 +168,4 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
             await _hubContext.Clients.All.SendAsync("StatusChanged", status);
         });
     }
-
-    public string GetServerStatus() => _currentStatus;
 }

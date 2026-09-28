@@ -95,12 +95,26 @@ export default function App() {
     };
   }, [connection]);
 
-  // fetch player list and server status on page load
+  const fetchServerStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/server/status`);
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      // Log the JSON data to the console
+      const data = await response.json();
+      console.info(`Returned JSON:`, data);
+
+      setServerStatus(data.isOnline ? 'Running' : 'Stopped');
+    } catch (err) {
+      console.error("Error fetching server status:", err);
+      setServerStatus('Stopped');
+    }
+  };
+
   useEffect(() => {
-    fetch(`${API_URL}/api/server/status`)
-      .then((res) => res.json())
-      .then((data) => setServerStatus(data.status))
-      .catch((err) => console.error("Error fetching server status:", err));
+    fetchServerStatus();
 
     fetch(`${API_URL}/api/server/players`)
       .then((res) => res.json())

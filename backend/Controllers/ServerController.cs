@@ -2,6 +2,7 @@ using System;
 using Microsoft.AspNetCore.Mvc;
 using MinecraftServerManager.Services;
 using System.Net;
+using System.Diagnostics;
 
 namespace MinecraftServerManager.Controllers;
 
@@ -12,17 +13,26 @@ public record CommandRequest(string Command);
 public class ServerController : ControllerBase
 {
     private readonly IMinecraftProcessService _processService;
+    private readonly MinecraftQueryService _queryService;
 
-    public ServerController(IMinecraftProcessService processService)
+    public ServerController(IMinecraftProcessService processService, MinecraftQueryService queryService)
     {
         _processService = processService;
+        _queryService = queryService;
     }
 
     [HttpGet("status")]
-    public IActionResult GetStatus()
+    public async Task<IActionResult> GetStatus()
     {
-        var status = _processService.GetServerStatus();
-        return Ok(new { status });
+        try
+        {
+            var status = await _queryService.GetServerStatusAsync();
+            return Ok(new { status.IsOnline });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 
     [HttpGet("logs")]

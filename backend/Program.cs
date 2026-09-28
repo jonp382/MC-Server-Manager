@@ -10,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<LogWatcherService>();
 builder.Services.AddSingleton<MinecraftProcessService>();
+builder.Services.AddTransient<MinecraftQueryService>();
 
 // register signalR 
 builder.Services.AddSignalR();
