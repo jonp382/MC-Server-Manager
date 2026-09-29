@@ -182,7 +182,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="bg-slate-950 text-slate-100 p-6 flex flex-col font-sans overflow-hidden">
+    <div className="bg-slate-950 text-slate-100 p-6 w-screen h-screen font-sans overflow-hidden">
       <Header
         serverStatus={serverStatus}
         isConnected={isConnected}
