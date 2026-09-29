@@ -86,6 +86,7 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
    public async Task<string> SendCommand(string command, long rconPort, string rconPassword)
     {
+        Console.WriteLine($"Sending command {command} to RCON {rconPort}, password {rconPassword}");
         using var rcon = new RCON(IPAddress.Parse(ServerIp), (ushort)rconPort, rconPassword);
         await rcon.ConnectAsync();
         return await rcon.SendCommandAsync(command);

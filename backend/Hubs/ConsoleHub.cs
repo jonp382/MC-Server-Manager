@@ -11,9 +11,4 @@ public class ConsoleHub : Hub
     {
         _processService = processService;
     }
-
-    public async Task SendServerCommand(string command)
-    {
-        await _processService.SendCommand(command);
-    }
 }

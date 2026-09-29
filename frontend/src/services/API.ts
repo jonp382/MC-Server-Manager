@@ -49,6 +49,7 @@ export const stopServer = async (appendLog: (msg: string) => void) => {
 
 export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, rconPort: number, rconPassword: string) => {
   try {
+    console.log(`Attempting to send command ${cmd} to ${rconPort} with password ${rconPassword}`)
     const response = await fetch(`${API_URL}/api/server/command`, { 
       method: 'POST', 
       headers: { 
@@ -56,13 +57,15 @@ export const sendCommand = async (appendLog: (msg: string) => void, cmd: string,
       }, 
       body: JSON.stringify({ 
         command: cmd, 
-        port: rconPort, 
-        password: rconPassword
+        rconPort: rconPort, 
+        rconPassword: rconPassword
         }) 
       });
 
     const data = await response.json();
-    appendLog(data.response);
+
+    console.log(`Response JSON:\n${JSON.stringify(data, null, 2)}`);
+    appendLog(data.success ? ("Successfully sent command: " + data.response) : ("Failed to execute command: " + data.error));
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

@@ -27,7 +27,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 
         try {
             // send command to back end via API post call
-            await sendCommand(onCommandExecution, trim, rconPort, rconPassword);
+            var response = await sendCommand(onCommandExecution, trim, rconPort, rconPassword);
 
             // add command to history
             setHistory((prev) => (prev[prev.length - 1] === commandInput ? prev : [...prev, commandInput]));
