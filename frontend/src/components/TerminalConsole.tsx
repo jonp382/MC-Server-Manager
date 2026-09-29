@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as signalR from '@microsoft/signalr';
 import { Terminal, RefreshCw } from 'lucide-react';
 import { CommandInput } from './CommandInput';
 import { getLogLineStyle, isInfoLog, isWarnLog, isErrorLog } from '../utils/logUtils';
@@ -24,7 +23,6 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     logs,
     rconPort,
     rconPassword,
-    isConnected,
     onCommandExecution,
     onClearLogs,
     onRetrieveLogs,
