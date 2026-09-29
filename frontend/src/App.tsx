@@ -187,7 +187,7 @@ export default function App() {
         serverStatus={serverStatus}
         isConnected={isConnected}
         onStart={() => startServer(appendLog)}
-        onStop={() => stopServer(appendLog)}
+        onStop={() => stopServer(appendLog, serverSettings.rconPort, serverSettings.rconPassword)}
         settings={serverSettings}
         onSaveSettings={handleSaveSettings}
       />

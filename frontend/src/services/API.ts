@@ -25,9 +25,19 @@ export const startServer = async (appendLog: (msg: string) => void) => {
   }
 };
 
-export const stopServer = async (appendLog: (msg: string) => void) => {
+export const stopServer = async (appendLog: (msg: string) => void, rconPort: number, rconPassword: string) => {
   try {
-    const response = await fetch(`${API_URL}/api/server/stop`, { method: 'POST' });
+    const response = await fetch(`${API_URL}/api/server/command`, { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+      }, 
+      body: JSON.stringify({ 
+        command: "stop", 
+        rconPort: rconPort, 
+        rconPassword: rconPassword
+        }) 
+      });
     const data = await response.json();
 
     switch (response.status) {
