@@ -20,7 +20,7 @@ export default function App() {
 
   const [serverSettings, setServerSettings] = useState<ServerSettings>(() => {
     const saved = localStorage.getItem('mc_server_settings');
-    return saved ? JSON.parse(saved) : { serverIp: '127.0.0.1', queryPort: 25565, rconPort: 25575 };
+    return saved ? JSON.parse(saved) : { queryPort: 25565, rconPort: 25575 };
   });
 
   const handleSaveSettings = (newSettings: ServerSettings) => {

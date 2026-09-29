@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Settings, X, Server, Radio, ShieldCheck } from 'lucide-react';
+import { Settings, X, Server, Radio, ShieldCheck, EyeOff, Eye } from 'lucide-react';
 
 export interface ServerSettings {
-  serverIp: string;
   queryPort: number;
   rconPort: number;
+  rconPassword: string;
 }
 
 interface SettingsModalProps {
@@ -15,6 +15,7 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formState, setFormState] = useState<ServerSettings>(settings);
+  const [showRconPassword, setShowRconPassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,21 +55,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
             {/* settings form */}
             <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs font-mono">
               
-              {/* server IP */}
-              <div>
-                <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
-                  <Server size={14} className="text-slate-500" /> Server IP / Hostname
-                </label>
-                <input
-                  type="text"
-                  value={formState.serverIp}
-                  onChange={(e) => setFormState({ ...formState, serverIp: e.target.value })}
-                  placeholder="127.0.0.1"
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
-                />
-              </div>
-
               {/* query port */}
               <div>
                 <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
@@ -97,6 +83,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
                   required
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
                 />
+              </div>
+
+              {/* RCON password */}
+              <div>
+                <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-emerald-400" /> RCON Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showRconPassword ? 'text' : 'password'}
+                    value={formState.rconPassword}
+                    onChange={(e) => setFormState({ ...formState, rconPassword: e.target.value })}
+                    placeholder=""
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRconPassword((prev) => !prev)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-md focus:outline-none"
+                    title={showRconPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showRconPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               {/* action buttons */}
