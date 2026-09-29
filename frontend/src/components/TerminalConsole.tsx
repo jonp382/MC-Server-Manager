@@ -12,18 +12,20 @@ export interface LogMessage {
 
 interface TerminalConsoleProps {
     logs: LogMessage[];
-    connection: signalR.HubConnection | null;
+    rconPort: number,
+    rconPassword: string,
     isConnected: boolean;
-    onCommandError: (errorMessage: string) => void;
+    onCommandExecution: (errorMessage: string) => void;
     onClearLogs?: () => void;
     onRetrieveLogs: () => void;
 }
 
 export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     logs,
-    connection,
+    rconPort,
+    rconPassword,
     isConnected,
-    onCommandError,
+    onCommandExecution,
     onClearLogs,
     onRetrieveLogs,
 }) => {
@@ -157,9 +159,9 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
 
             {/* Terminal Input Form */}
             <CommandInput
-                connection={connection}
-                isConnected={isConnected}
-                onCommandError={onCommandError}
+                rconPassword={rconPassword}
+                rconPort={rconPort}
+                onCommandExecution={onCommandExecution}
             />
         </div>
     );

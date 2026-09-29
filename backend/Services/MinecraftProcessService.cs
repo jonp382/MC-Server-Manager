@@ -13,8 +13,7 @@ public interface IMinecraftProcessService
 {
     bool IsRunning {get; set; }
     Task<bool> StartServer();
-    Task<bool> StopServer();
-    Task<string> SendCommand(string command);
+    Task<string> SendCommand(string command, long rconPort, string rconPassword);
     IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
 
@@ -33,8 +32,6 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
     // todo: make these controllable by the server manager instead
     private const string ServerIp = "127.0.0.1";
-    private const ushort RconPort = 25575;
-    private const string RconPassword = "test_password";
     private const string ServerDir = @"/home/jonny/Games/Minecraft Servers/Test Server";
 
     public async Task<bool> StartServer()
@@ -87,24 +84,11 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
     public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
 
-   public async Task<string> SendCommand(string command)
+   public async Task<string> SendCommand(string command, long rconPort, string rconPassword)
     {
-        using var rcon = new RCON(IPAddress.Parse(ServerIp), RconPort, RconPassword);
+        using var rcon = new RCON(IPAddress.Parse(ServerIp), (ushort)rconPort, rconPassword);
         await rcon.ConnectAsync();
         return await rcon.SendCommandAsync(command);
-    }
-
-    public async Task<bool> StopServer()
-    {
-        if (IsRunning)
-        {
-            await SendCommand("stop");
-            UpdateStatus("Stopped");
-            IsRunning = false;
-            return true;
-        }
-
-        return false;
     }
 
     private void OnProcessExited(object? s, EventArgs e)

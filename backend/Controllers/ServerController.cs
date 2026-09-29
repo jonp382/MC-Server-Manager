@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using MinecraftServerManager.Services;
 using System.Net;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace MinecraftServerManager.Controllers;
 
-public record CommandRequest(string Command);
+public record CommandRequest(string Command, long rconPort, string rconPassword);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -61,7 +62,7 @@ public class ServerController : ControllerBase
     {
         try
         {
-            string response = await _processService.SendCommand(req.Command);
+            string response = await _processService.SendCommand(req.Command, req.rconPort, req.rconPassword);
             return Ok(new {success = true, response});
         }
         catch (Exception ex)
@@ -85,11 +86,17 @@ public class ServerController : ControllerBase
     }
 
     [HttpPost("stop")]
-    public async Task<IActionResult> StopServer()
+    public async Task<IActionResult> StopServer([FromBody] CommandRequest req)
     {
+        // use the same structure as sendcommand but just ignore the command and hard-code stop.
         try
         {
-            bool result = await _processService.StopServer();
+            CommandRequest customRequest = req with
+            {
+                Command="stop"
+            };
+            
+            await SendCommand(customRequest);
             return Accepted(new {status = "Server stopped via RCON"});
         }
         catch (Exception ex)

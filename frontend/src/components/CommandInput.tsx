@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import * as signalR from '@microsoft/signalr';
+import { sendCommand } from '../services/API'
 
 interface CommandInputProps {
-    connection: signalR.HubConnection | null;
-    isConnected: boolean;
-    onCommandError: (errorMessage: string) => void;
+    rconPort: number,
+    rconPassword: string,
+    onCommandExecution: (errorMessage: string) => void;
 }
 
 export const CommandInput: React.FC<CommandInputProps> = ({
-    connection,
-    isConnected,
-    onCommandError,
+    rconPort,
+    rconPassword,
+    onCommandExecution,
 }) => {
     // command history for up/down arrow
     const [history, setHistory] = useState<string[]>([]); // the list of commands
@@ -23,11 +23,11 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 
     const handleSendCommand = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!commandInput.trim() || !connection) return;
+        const trim = commandInput.trim();
 
         try {
-            // send command to back end
-            await connection.invoke('SendServerCommand', commandInput);
+            // send command to back end via API post call
+            await sendCommand(onCommandExecution, trim, rconPort, rconPassword);
 
             // add command to history
             setHistory((prev) => (prev[prev.length - 1] === commandInput ? prev : [...prev, commandInput]));
@@ -36,7 +36,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
             setHistoryIndex(-1);
             setTempInput('');
         } catch (err: any) {
-            onCommandError(err.Message || 'Failed to send command');
+            onCommandExecution(err.Message || 'Failed to send command');
         }
     };
 
@@ -83,14 +83,12 @@ export const CommandInput: React.FC<CommandInputProps> = ({
                     if (historyIndex !== -1) setHistoryIndex(-1);
                 }}
                 onKeyDown={handleKeyDown}
-                disabled={!isConnected}
                 placeholder="Type server command (Press ↑/↓ for history)..."
                 style={{ color: '#ffffff', backgroundColor: '#020617' }}
                 className="flex-1 text-white text-sm font-mono focus:outline-none px-2 py-1 placeholder:text-slate-400 disabled:opacity-50"
             />
             <button
                 type="submit"
-                disabled={!isConnected || !commandInput.trim()}
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-mono text-xs rounded transition"
             >
                 Send

@@ -195,11 +195,13 @@ export default function App() {
       <div className="gap-6 flex-1 min-h-0">
         <TerminalConsole
           logs={logs}
-          connection={connection}
           isConnected={isConnected}
-          onCommandError={(errText) => setLogs((prev) => [...prev, { id: Math.random().toString(36).substring(2, 9), text: `[COMMAND ERROR] ${errText}`, timestamp: new Date().toLocaleTimeString() }])}
+          onCommandExecution={(errText) => appendLog(errText)}
           onClearLogs={onClearLogs}
           onRetrieveLogs={handleRetrieveLogs}
+
+          rconPort={serverSettings.rconPort}
+          rconPassword={serverSettings.rconPassword}
         />
 
         <PlayerList players={players} />

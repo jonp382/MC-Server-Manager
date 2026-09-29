@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, X, Server, Radio, ShieldCheck, EyeOff, Eye } from 'lucide-react';
+import { Settings, X, Radio, ShieldCheck, EyeOff, Eye } from 'lucide-react';
 
 export interface ServerSettings {
   queryPort: number;
