@@ -4,7 +4,7 @@ import * as signalR from '@microsoft/signalr';
 import { Header } from './components/Header';
 import { PlayerList } from './components/PlayerList';
 import { TerminalConsole, LogMessage } from './components/TerminalConsole';
-import { startServer, stopServer } from './services/API';
+import { startServer, stopServer, targetQuery } from './services/API';
 import { ServerSettings } from './components/SettingsModal';
 
 const API_URL = 'http://localhost:5029';
@@ -20,7 +20,8 @@ export default function App() {
 
   const [serverSettings, setServerSettings] = useState<ServerSettings>(() => {
     const saved = localStorage.getItem('mc_server_settings');
-    return saved ? JSON.parse(saved) : { queryPort: 25565, rconPort: 25575 };
+    // old saved settings have no serverIp, default it to localhost
+    return saved ? { serverIp: '127.0.0.1', ...JSON.parse(saved) } : { serverIp: '127.0.0.1', queryPort: 25565, rconPort: 25575, rconPassword: '' };
   });
 
   const handleSaveSettings = (newSettings: ServerSettings) => {
@@ -97,7 +98,7 @@ export default function App() {
 
   const fetchServerStatus = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/server/status`);
+      const response = await fetch(`${API_URL}/api/server/status${targetQuery(serverSettings.serverIp, serverSettings.queryPort)}`);
       if (!response.ok) {
         throw new Error(`Server returned HTTP ${response.status}`);
       }
@@ -115,7 +116,7 @@ export default function App() {
 
   const fetchCurrentPlayers = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/server/players`);
+      const response = await fetch(`${API_URL}/api/server/players${targetQuery(serverSettings.serverIp, serverSettings.queryPort)}`);
       if (!response.ok) {
         throw new Error(`Server returned HTTP ${response.status}`);
       }
@@ -135,7 +136,7 @@ export default function App() {
   useEffect(() => {
     fetchServerStatus();
     fetchCurrentPlayers();
-  }, []);
+  }, [serverSettings]);
 
   const handleRetrieveLogs = async () => {
     try {
@@ -179,7 +180,7 @@ export default function App() {
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, []);
+  }, [serverSettings]);
 
   return (
     <div className="bg-slate-950 text-slate-100 p-6 w-screen h-screen font-sans overflow-hidden">
@@ -187,7 +188,7 @@ export default function App() {
         serverStatus={serverStatus}
         isConnected={isConnected}
         onStart={() => startServer(appendLog)}
-        onStop={() => stopServer(appendLog, serverSettings.rconPort, serverSettings.rconPassword)}
+        onStop={() => stopServer(appendLog, serverSettings.serverIp, serverSettings.rconPort, serverSettings.rconPassword)}
         settings={serverSettings}
         onSaveSettings={handleSaveSettings}
       />
@@ -200,6 +201,7 @@ export default function App() {
           onClearLogs={onClearLogs}
           onRetrieveLogs={handleRetrieveLogs}
 
+          serverIp={serverSettings.serverIp}
           rconPort={serverSettings.rconPort}
           rconPassword={serverSettings.rconPassword}
         />

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Settings, X, Radio, ShieldCheck, EyeOff, Eye } from 'lucide-react';
+import { Settings, X, Radio, ShieldCheck, Globe, EyeOff, Eye } from 'lucide-react';
 
 export interface ServerSettings {
+  serverIp: string;
   queryPort: number;
   rconPort: number;
   rconPassword: string;
@@ -54,7 +55,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
 
             {/* settings form */}
             <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs font-mono">
-              
+
+              {/* server ip */}
+              <div>
+                <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Globe size={14} className="text-violet-400" /> Server IP
+                </label>
+                <input
+                  type="text"
+                  value={formState.serverIp}
+                  onChange={(e) => setFormState({ ...formState, serverIp: e.target.value })}
+                  placeholder="127.0.0.1"
+                  required
+                  pattern="^[A-Za-z0-9.\-:]+$"
+                  title="ip address or hostname, e.g. 127.0.0.1, localhost, mc.example.com"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                />
+                <p className="text-slate-500 mt-1">where the server lives. defaults to 127.0.0.1</p>
+              </div>
+
               {/* query port */}
               <div>
                 <label className="block text-slate-400 mb-1 flex items-center gap-1.5">

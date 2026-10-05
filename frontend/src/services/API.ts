@@ -1,5 +1,14 @@
 const API_URL = 'http://localhost:5029';
 
+// builds the ?ip=&port= query for the status/players endpoints so they target the right server
+export const targetQuery = (serverIp: string, queryPort: number) => {
+  const params = new URLSearchParams();
+  if (serverIp) params.set('ip', serverIp);
+  if (queryPort) params.set('port', String(queryPort));
+  const q = params.toString();
+  return q ? `?${q}` : '';
+};
+
 export const startServer = async (appendLog: (msg: string) => void) => {
   try {
     const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
@@ -25,7 +34,7 @@ export const startServer = async (appendLog: (msg: string) => void) => {
   }
 };
 
-export const stopServer = async (appendLog: (msg: string) => void, rconPort: number, rconPassword: string) => {
+export const stopServer = async (appendLog: (msg: string) => void, serverIp: string, rconPort: number, rconPassword: string) => {
   try {
     const response = await fetch(`${API_URL}/api/server/command`, { 
       method: 'POST', 
@@ -34,6 +43,7 @@ export const stopServer = async (appendLog: (msg: string) => void, rconPort: num
       }, 
       body: JSON.stringify({ 
         command: "stop", 
+        serverIp: serverIp, 
         rconPort: rconPort, 
         rconPassword: rconPassword
         }) 
@@ -57,9 +67,9 @@ export const stopServer = async (appendLog: (msg: string) => void, rconPort: num
   }
 };
 
-export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, rconPort: number, rconPassword: string) => {
+export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, serverIp: string, rconPort: number, rconPassword: string) => {
   try {
-    console.log(`Attempting to send command ${cmd} to ${rconPort} with password ${rconPassword}`)
+    console.log(`Attempting to send command ${cmd} to ${serverIp}:${rconPort}`)
     const response = await fetch(`${API_URL}/api/server/command`, { 
       method: 'POST', 
       headers: { 
@@ -67,6 +77,7 @@ export const sendCommand = async (appendLog: (msg: string) => void, cmd: string,
       }, 
       body: JSON.stringify({ 
         command: cmd, 
+        serverIp: serverIp, 
         rconPort: rconPort, 
         rconPassword: rconPassword
         }) 

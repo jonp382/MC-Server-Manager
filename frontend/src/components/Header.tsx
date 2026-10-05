@@ -40,6 +40,12 @@ export const Header: React.FC<HeaderProps> = ({
                         {serverStatus}
                     </span>
                 </p>
+                <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                    Targeting:
+                    <span className="text-slate-200 font-semibold font-mono">
+                        {settings.serverIp}:{settings.queryPort}
+                    </span>
+                </p>
             </div>
 
             {/* start/stop */}

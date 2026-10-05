@@ -10,15 +10,19 @@ public sealed class LogWatcherService : BackgroundService
     private readonly IHubContext<ConsoleHub> _hubContext;
     private readonly ILogger<LogWatcherService> _logger;
 
-    private readonly string _logFilePath =
-        "/home/jonny/Games/Minecraft Servers/Test Server/logs/latest.log";
+    private readonly string _logFilePath;
 
     public LogWatcherService(
         IHubContext<ConsoleHub> hubContext,
-        ILogger<LogWatcherService> logger)
+        ILogger<LogWatcherService> logger,
+        IConfiguration config)
     {
         _hubContext = hubContext;
         _logger = logger;
+
+        var serverDir = config["Minecraft:ServerDir"]
+            ?? throw new InvalidOperationException("Minecraft:ServerDir is not set in appsettings");
+        _logFilePath = Path.Combine(serverDir, "logs", "latest.log");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -52,6 +56,7 @@ public sealed class LogWatcherService : BackgroundService
                 position = stream.Position;
 
                 var identity = GetFileIdentity(_logFilePath);
+                var lastIdentityCheck = DateTime.UtcNow;
 
                 _logger.LogInformation(
                     "Attached to Minecraft log. Identity={Identity}, Position={Position}",
@@ -72,16 +77,22 @@ public sealed class LogWatcherService : BackgroundService
                         break;
                     }
 
-                    var currentIdentity = GetFileIdentity(_logFilePath);
-
-                    if (currentIdentity != identity)
+                    // stat spawns a process, so only check the identity every couple of seconds
+                    if ((DateTime.UtcNow - lastIdentityCheck).TotalSeconds >= 2)
                     {
-                        _logger.LogInformation(
-                            "Minecraft log was replaced. Old={OldIdentity}, New={NewIdentity}",
-                            identity,
-                            currentIdentity);
+                        lastIdentityCheck = DateTime.UtcNow;
 
-                        break;
+                        var currentIdentity = GetFileIdentity(_logFilePath);
+
+                        if (currentIdentity != identity)
+                        {
+                            _logger.LogInformation(
+                                "Minecraft log was replaced. Old={OldIdentity}, New={NewIdentity}",
+                                identity,
+                                currentIdentity);
+
+                            break;
+                        }
                     }
 
                     var currentLength = new FileInfo(_logFilePath).Length;

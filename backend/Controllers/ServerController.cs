@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace MinecraftServerManager.Controllers;
 
-public record CommandRequest(string Command, long rconPort, string rconPassword);
+public record CommandRequest(string Command, string? ServerIp, long rconPort, string rconPassword);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -23,11 +23,11 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("status")]
-    public async Task<IActionResult> GetStatus()
+    public async Task<IActionResult> GetStatus(string? ip = null, int? port = null)
     {
         try
         {
-            var status = await _queryService.QueryServerAsync();
+            var status = await _queryService.QueryServerAsync(ip, port);
             return Ok(new { status.IsOnline });
         }
         catch (Exception ex)
@@ -39,16 +39,23 @@ public class ServerController : ControllerBase
     [HttpGet("logs")]
     public IActionResult GetLogs()
     {
-        var logs = _processService.GetRecentLogs();
-        return Ok(new { logs });
+        try
+        {
+            var logs = _processService.GetRecentLogs();
+            return Ok(new { logs });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 
     [HttpGet("players")]
-    public async Task<IActionResult> GetPlayers()
+    public async Task<IActionResult> GetPlayers(string? ip = null, int? port = null)
     {
         try
         {
-            var status = await _queryService.QueryServerAsync();
+            var status = await _queryService.QueryServerAsync(ip, port);
             return Ok(new { status.OnlinePlayers });
         }
         catch (Exception ex)
@@ -62,7 +69,7 @@ public class ServerController : ControllerBase
     {
         try
         {
-            string response = await _processService.SendCommand(req.Command, req.rconPort, req.rconPassword);
+            string response = await _processService.SendCommand(req.Command, req.ServerIp, req.rconPort, req.rconPassword);
             return Ok(new {success = true, response});
         }
         catch (Exception ex)

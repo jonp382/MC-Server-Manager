@@ -20,20 +20,27 @@ public class MinecraftQueryService
         _config = config;
     }
 
-    public async Task<ServerStatusResult> QueryServerAsync()
+    // ip and port are optional so the frontend can target any server, falls back to appsettings when not given
+    public async Task<ServerStatusResult> QueryServerAsync(string? ip = null, int? port = null)
     {
-        string host = _config["Minecraft:ServerIp"] ?? "127.0.0.1";
-        
+        string host = string.IsNullOrWhiteSpace(ip) ? (_config["Minecraft:ServerIp"] ?? "127.0.0.1") : ip.Trim();
+
         // RECOMMENDED: Switch to TCP Server List Ping (25565) to bypass UDP headaches.
         // If you strictly want UDP Query, use your query port (25566).
-        int port = int.Parse(_config["Minecraft:ServerPort"] ?? "25565"); 
+        int qport = port ?? int.Parse(_config["Minecraft:QueryPort"] ?? "25565");
 
         var result = new ServerStatusResult { IsOnline = false };
+
+        if (qport < 1 || qport > 65535)
+        {
+            Console.WriteLine($"[ERROR] [QueryService] Port {qport} is out of range");
+            return result;
+        }
 
         try
         {
             // MineStat handles the connections, timeouts, and multi-packet data streams automatically
-            var ms = new MineStat(host, (ushort)port);
+            var ms = new MineStat(host, (ushort)qport);
 
             if (ms.ServerUp)
             {

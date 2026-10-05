@@ -13,26 +13,27 @@ public interface IMinecraftProcessService
 {
     bool IsRunning {get; set; }
     Task<bool> StartServer();
-    Task<string> SendCommand(string command, long rconPort, string rconPassword);
+    Task<string> SendCommand(string command, string? ip, long rconPort, string rconPassword);
     IEnumerable<string> GetOnlinePlayers();
     event Action<string>? OutputReceived;
 
     IEnumerable<string> GetRecentLogs();
 }
 
-public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMinecraftProcessService
+public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext, IConfiguration config) : IMinecraftProcessService
 {
     public bool IsRunning {get; set; } = false;
     public event Action<string>? OutputReceived;
     private readonly IHubContext<ConsoleHub> _hubContext = hubContext;
+    private readonly IConfiguration _config = config;
     private string _currentStatus = "Stopped";
 
     private readonly ConcurrentDictionary<string, byte> _onlinePlayers = new();
     private static readonly int LogsToStore = 500;
 
-    // todo: make these controllable by the server manager instead
-    private const string ServerIp = "127.0.0.1";
-    private const string ServerDir = @"/home/jonny/Games/Minecraft Servers/Test Server";
+    // server dir and default ip come from appsettings, the frontend can override the ip per request
+    private string ServerDir => _config["Minecraft:ServerDir"] ?? throw new InvalidOperationException("Minecraft:ServerDir is not set in appsettings");
+    private string DefaultIp => _config["Minecraft:ServerIp"] ?? "127.0.0.1";
 
     public async Task<bool> StartServer()
     {
@@ -84,10 +85,20 @@ public class MinecraftProcessService(IHubContext<ConsoleHub> hubContext) : IMine
 
     public IEnumerable<string> GetOnlinePlayers() => _onlinePlayers.Keys;
 
-   public async Task<string> SendCommand(string command, long rconPort, string rconPassword)
+   public async Task<string> SendCommand(string command, string? ip, long rconPort, string rconPassword)
     {
-        Console.WriteLine($"Sending command {command} to RCON {rconPort}, password {rconPassword}");
-        using var rcon = new RCON(IPAddress.Parse(ServerIp), (ushort)rconPort, rconPassword);
+        if (rconPort < 1 || rconPort > 65535)
+            throw new ArgumentOutOfRangeException(nameof(rconPort), $"RCON port {rconPort} is out of range");
+
+        var target = string.IsNullOrWhiteSpace(ip) ? DefaultIp : ip.Trim();
+        Console.WriteLine($"Sending command {command} to RCON {target}:{rconPort}");
+
+        // coreRCON wants an IPAddress, dns names get resolved first
+        var address = IPAddress.TryParse(target, out var parsed)
+            ? parsed
+            : (await Dns.GetHostAddressesAsync(target))[0];
+
+        using var rcon = new RCON(address, (ushort)rconPort, rconPassword);
         await rcon.ConnectAsync();
         return await rcon.SendCommandAsync(command);
     }
