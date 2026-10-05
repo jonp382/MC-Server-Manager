@@ -1,22 +1,33 @@
 import React, { useState } from 'react';
-import { Settings, X, Radio, ShieldCheck, Globe, EyeOff, Eye } from 'lucide-react';
-
-export interface ServerSettings {
-  serverIp: string;
-  queryPort: number;
-  rconPort: number;
-  rconPassword: string;
-}
+import { Settings, X, Radio, ShieldCheck, Globe, EyeOff, Eye, Folder } from 'lucide-react';
+import { ServerInstance } from '../services/API';
 
 interface SettingsModalProps {
-  settings: ServerSettings;
-  onSave: (newSettings: ServerSettings) => void;
+  instance: ServerInstance | null; // null = add a new server
+  onSave: (instance: ServerInstance) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }) => {
+const blank: ServerInstance = {
+  id: '',
+  name: '',
+  serverDir: '',
+  ip: '127.0.0.1',
+  queryPort: 25565,
+  rconPort: 25575,
+  rconPassword: '',
+};
+
+// one editor for both add and edit. add gets a blank template, edit gets the active instance.
+export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }) => {
+  const isAdd = instance === null;
   const [isOpen, setIsOpen] = useState(false);
-  const [formState, setFormState] = useState<ServerSettings>(settings);
+  const [formState, setFormState] = useState<ServerInstance>(instance ?? blank);
   const [showRconPassword, setShowRconPassword] = useState(false);
+
+  const open = () => {
+    setFormState(instance ?? blank);
+    setIsOpen(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,22 +39,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
     <>
       {/* settings button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={open}
         className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-mono"
-        title="Server Settings"
+        title={isAdd ? 'Add Server' : 'Edit Server'}
       >
         <Settings size={16} className="text-slate-400 hover:rotate-45 transition-transform duration-300" />
-        <span className="hidden sm:inline">Settings</span>
+        <span className="hidden sm:inline">{isAdd ? 'Add Server' : 'Settings'}</span>
       </button>
 
       {/* modal window */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            
+
             <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <Settings size={18} className="text-emerald-400" /> Connection Settings
+                <Settings size={18} className="text-emerald-400" />
+                {isAdd ? 'Add Server' : 'Edit Server'}
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
@@ -56,6 +68,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
             {/* settings form */}
             <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs font-mono">
 
+              {/* name */}
+              <div>
+                <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Globe size={14} className="text-violet-400" /> Name
+                </label>
+                <input
+                  type="text"
+                  value={formState.name}
+                  onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                  placeholder="My Server"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                />
+              </div>
+
+              {/* server directory */}
+              <div>
+                <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Folder size={14} className="text-sky-400" /> Server Directory
+                </label>
+                <input
+                  type="text"
+                  value={formState.serverDir}
+                  onChange={(e) => setFormState({ ...formState, serverDir: e.target.value })}
+                  placeholder="/home/user/minecraft"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                />
+                <p className="text-slate-500 mt-1">where server.jar and logs/ live. used for start and log tailing</p>
+              </div>
+
               {/* server ip */}
               <div>
                 <label className="block text-slate-400 mb-1 flex items-center gap-1.5">
@@ -63,8 +106,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
                 </label>
                 <input
                   type="text"
-                  value={formState.serverIp}
-                  onChange={(e) => setFormState({ ...formState, serverIp: e.target.value })}
+                  value={formState.ip}
+                  onChange={(e) => setFormState({ ...formState, ip: e.target.value })}
                   placeholder="127.0.0.1"
                   required
                   pattern="^[A-Za-z0-9.\-:]+$"
@@ -142,7 +185,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave }
                   type="submit"
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
                 >
-                  Save Connection Settings
+                  {isAdd ? 'Add Server' : 'Save'}
                 </button>
               </div>
 

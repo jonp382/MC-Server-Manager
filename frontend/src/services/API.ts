@@ -1,31 +1,82 @@
 const API_URL = 'http://localhost:5029';
 
-// builds the ?ip=&port= query for the status/players endpoints so they target the right server
-export const targetQuery = (serverIp: string, queryPort: number) => {
-  const params = new URLSearchParams();
-  if (serverIp) params.set('ip', serverIp);
-  if (queryPort) params.set('port', String(queryPort));
-  const q = params.toString();
-  return q ? `?${q}` : '';
+export interface ServerInstance {
+  id: string;
+  name: string;
+  serverDir: string;
+  ip: string;
+  queryPort: number;
+  rconPort: number;
+  rconPassword: string;
+}
+
+// instance crud, servers.json is the source of truth on the backend
+export const fetchServers = async (): Promise<ServerInstance[]> => {
+  const res = await fetch(`${API_URL}/api/server/servers`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 };
 
-export const startServer = async (appendLog: (msg: string) => void) => {
+export const createServer = async (instance: ServerInstance): Promise<ServerInstance> => {
+  const res = await fetch(`${API_URL}/api/server/servers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(instance),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+
+export const updateServer = async (instance: ServerInstance): Promise<ServerInstance> => {
+  const res = await fetch(`${API_URL}/api/server/servers`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(instance),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+
+export const deleteServer = async (id: string): Promise<void> => {
+  const res = await fetch(`${API_URL}/api/server/servers/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+};
+
+export const fetchStatus = async (id: string): Promise<boolean> => {
+  const res = await fetch(`${API_URL}/api/server/status?id=${id}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data.isOnline;
+};
+
+export const fetchPlayers = async (id: string): Promise<string[]> => {
+  const res = await fetch(`${API_URL}/api/server/players?id=${id}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data.onlinePlayers;
+};
+
+export const fetchLogs = async (id: string): Promise<string[]> => {
+  const res = await fetch(`${API_URL}/api/server/logs?id=${id}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data.logs || [];
+};
+
+export const startServer = async (appendLog: (msg: string) => void, id: string) => {
   try {
-    const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
+    const response = await fetch(`${API_URL}/api/server/start?id=${id}`, { method: 'POST' });
     const data = await response.json();
 
     switch (response.status) {
-      case 200: // OK
-        appendLog("[SYSTEM] Starting server...");
-        break;
       case 202: // ACCEPTED
-        appendLog("[SYSTEM] Starting server...");
+        appendLog('[SYSTEM] Starting server as detached process...');
         break;
       case 409: // CONFLICT
-        appendLog("[SYSTEM] [HTTP 409] Server is already started.");
+        appendLog('[SYSTEM] [HTTP 409] Server is already started.');
         break;
       default:
-        appendLog(`[SYSTEM] [HTTP ${response.status}] ${data.message || 'Error starting server'}`);
+        appendLog(`[SYSTEM] [HTTP ${response.status}] ${data.message || data.error || 'Error starting server'}`);
         break;
     }
   } catch (err) {
@@ -34,66 +85,26 @@ export const startServer = async (appendLog: (msg: string) => void) => {
   }
 };
 
-export const stopServer = async (appendLog: (msg: string) => void, serverIp: string, rconPort: number, rconPassword: string) => {
+export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, id: string) => {
   try {
-    const response = await fetch(`${API_URL}/api/server/command`, { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-      }, 
-      body: JSON.stringify({ 
-        command: "stop", 
-        serverIp: serverIp, 
-        rconPort: rconPort, 
-        rconPassword: rconPassword
-        }) 
-      });
-    const data = await response.json();
-
-    switch (response.status) {
-      case 202:
-        appendLog("[SYSTEM] Stopping server...");
-        break;
-      case 409:
-        appendLog("[SYSTEM] [HTTP 409] Server is not running.");
-        break;
-      default:
-        appendLog(`[SYSTEM] [HTTP ${response.status}] ${data.message || 'Error stopping server'}`);
-        break;
-    }
-  } catch (err) {
-    console.error('[SYSTEM] Error stopping server:', err);
-    appendLog('[SYSTEM ERROR] Failed to connect to stop endpoint.');
-  }
-};
-
-export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, serverIp: string, rconPort: number, rconPassword: string) => {
-  try {
-    console.log(`Attempting to send command ${cmd} to ${serverIp}:${rconPort}`)
-    const response = await fetch(`${API_URL}/api/server/command`, { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-      }, 
-      body: JSON.stringify({ 
-        command: cmd, 
-        serverIp: serverIp, 
-        rconPort: rconPort, 
-        rconPassword: rconPassword
-        }) 
-      });
+    const response = await fetch(`${API_URL}/api/server/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serverId: id, command: cmd }),
+    });
 
     const data = await response.json();
-
-    console.log(`Response JSON:\n${JSON.stringify(data, null, 2)}`);
-    appendLog(data.success ? ("Successfully sent command: " + data.response) : ("Failed to execute command: " + data.error));
+    appendLog(data.success ? 'Successfully sent command: ' + data.response : 'Failed to execute command: ' + data.error);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
   } catch (error: any) {
     console.error('[SYSTEM] Error sending command:', error);
-
   }
+};
+
+export const stopServer = async (appendLog: (msg: string) => void, id: string) => {
+  appendLog('[SYSTEM] Stopping server...');
+  return sendCommand(appendLog, 'stop', id);
 };
