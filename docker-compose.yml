@@ -12,18 +12,20 @@ services:
       # servers.json lives on the mounted volume so it survives rebuilds
       - SERVER_REGISTRY_PATH=/app/data/servers.json
       # the registry stores host paths; the backend sees the mounted parent
-      # folder at MSM_SERVER_MOUNT and translates instance paths to it
-      - MSM_SERVER_ROOT=/home/jonny/Games/Minecraft Servers
+      # folder at MSM_SERVER_MOUNT and translates instance paths to it.
+      # set MSM_SERVER_ROOT to your host folder of server dirs
+      - MSM_SERVER_ROOT=/path/to/minecraft-servers
       - MSM_SERVER_MOUNT=/servers
       # java for spawning servers comes from the host, so the container
       # can run the flavor the server needs. mount a jdk and point java at it
-      # - /home/jonny/jdk-25:/opt/jdk
+      # - /path/to/jdk-21:/opt/jdk
       # - JAVA_HOME=/opt/jdk
     volumes:
       - server-data:/app/data
       # one parent mount covers every server folder under it; adding a
-      # server in the UI needs no compose change
-      - /home/jonny/Games/Minecraft Servers:/servers
+      # server in the UI needs no compose change. set the host side to
+      # the same folder as MSM_SERVER_ROOT
+      - /path/to/minecraft-servers:/servers
     # healthcheck opens a tcp socket to the api with bash's builtin
     # /dev/tcp, so the image needs no curl
     healthcheck:

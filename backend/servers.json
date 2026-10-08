@@ -1,11 +1,1 @@
-[
-  {
-    "Id": "545604f1efa64663bf66dd8e00aacd40",
-    "Name": "Default Server",
-    "ServerDir": "/home/jonny/Games/Minecraft Servers/Test Server",
-    "Ip": "127.0.0.1",
-    "QueryPort": 25565,
-    "RconPort": 25575,
-    "RconPassword": "test_password"
-  }
-]
+[]

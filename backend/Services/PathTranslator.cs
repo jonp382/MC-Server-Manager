@@ -7,7 +7,7 @@ namespace MinecraftServerManager.Services;
 // unset and paths pass through unchanged.
 public sealed class PathTranslator
 {
-    private readonly string? _root;   // host parent folder, e.g. /home/jonny/Games/Minecraft Servers
+    private readonly string? _root;   // host parent folder, e.g. /path/to/minecraft-servers
     private readonly string? _mount;  // container mount point, e.g. /servers
 
     public PathTranslator(IConfiguration config)
