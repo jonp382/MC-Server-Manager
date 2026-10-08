@@ -66,14 +66,6 @@ The server must have RCON enabled (`enable-rcon=true`, a `rcon.port`, a `rcon.pa
 - The log tail reads backwards from the end of the file, so a large log does not get read into memory in full.
 - RCON ip, port, and password come from the instance, not from the browser.
 
-## Recent changes
-
-- Server registry and instance model, `servers.json` as the source of truth.
-- Server process service that starts the server detached, so the backend crashing does not kill the server.
-- Log watcher and controller made per instance, log lines tagged with the server id.
-- Frontend supports multiple server instances, a selector in the header, logs kept per server.
-- Server ip targeting, start server works locally.
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
