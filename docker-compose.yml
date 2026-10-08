@@ -2,16 +2,32 @@ services:
   backend:
     build: ./backend
     # no ports mapping: only nginx talks to the backend, and the browser
-    # reaches it through the /api and /hubs proxies on the frontend
+    # reaches it through the /api and /hubs proxies on the frontend.
+    # rcon/status to host servers needs network_mode: "host" (see README);
+    # on the host network the compose service name has no dns, so nginx
+    # would proxy through the host gateway instead
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://0.0.0.0:5029
       # servers.json lives on the mounted volume so it survives rebuilds
       - SERVER_REGISTRY_PATH=/app/data/servers.json
+      # the registry stores host paths; the backend sees the mounted parent
+      # folder at MSM_SERVER_MOUNT and translates instance paths to it
+      - MSM_SERVER_ROOT=/home/jonny/Games/Minecraft Servers
+      - MSM_SERVER_MOUNT=/servers
+      # java for spawning servers comes from the host, so the container
+      # can run the flavor the server needs. mount a jdk and point java at it
+      # - /home/jonny/jdk-25:/opt/jdk
+      # - JAVA_HOME=/opt/jdk
     volumes:
       - server-data:/app/data
+      # one parent mount covers every server folder under it; adding a
+      # server in the UI needs no compose change
+      - /home/jonny/Games/Minecraft Servers:/servers
+    # healthcheck opens a tcp socket to the api with bash's builtin
+    # /dev/tcp, so the image needs no curl
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5029/api/server/servers"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5029"]
       interval: 30s
       timeout: 5s
       retries: 3

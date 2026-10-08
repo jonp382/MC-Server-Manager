@@ -8,6 +8,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ServerRegistry>();
+builder.Services.AddSingleton<PathTranslator>();
 builder.Services.AddSingleton<ServerProcessService>();
 builder.Services.AddTransient<MinecraftQueryService>();
 builder.Services.AddHostedService<LogWatcherService>();

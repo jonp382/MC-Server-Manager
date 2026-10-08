@@ -12,11 +12,6 @@ RUN dotnet publish -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
-# java is needed to spawn detached minecraft servers, and curl for the healthcheck
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends openjdk-17-jre-headless curl \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /app/out .
 
 # bind to all interfaces inside the container; compose overrides the port
