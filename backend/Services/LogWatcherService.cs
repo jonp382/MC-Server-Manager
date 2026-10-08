@@ -14,6 +14,7 @@ public sealed class LogWatcherService : BackgroundService
     private readonly IHubContext<ConsoleHub> _hubContext;
     private readonly ILogger<LogWatcherService> _logger;
     private readonly ServerRegistry _registry;
+    private readonly PathTranslator _paths;
 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _watchers = new();
     private CancellationToken _stoppingToken;
@@ -21,11 +22,13 @@ public sealed class LogWatcherService : BackgroundService
     public LogWatcherService(
         IHubContext<ConsoleHub> hubContext,
         ILogger<LogWatcherService> logger,
-        ServerRegistry registry)
+        ServerRegistry registry,
+        PathTranslator paths)
     {
         _hubContext = hubContext;
         _logger = logger;
         _registry = registry;
+        _paths = paths;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,7 +75,8 @@ public sealed class LogWatcherService : BackgroundService
 
     private async Task WatchLoop(ServerInstance instance, CancellationToken token)
     {
-        var logFilePath = Path.Combine(instance.ServerDir, "logs", "latest.log");
+        // registry stores host paths; watch the mounted container path
+        var logFilePath = Path.Combine(_paths.ToContainerPath(instance.ServerDir), "logs", "latest.log");
 
         _logger.LogInformation(
             "LogWatcherService started watching {Path} for {Name}",

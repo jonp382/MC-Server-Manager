@@ -17,6 +17,12 @@ public class ServerProcessService
 
     // per-instance flag, set on start, cleared on stop. the query service is the real source of online truth.
     private readonly ConcurrentDictionary<string, bool> _running = new();
+    private readonly PathTranslator _paths;
+
+    public ServerProcessService(PathTranslator paths)
+    {
+        _paths = paths;
+    }
 
     public bool IsRunning(ServerInstance instance) => _running.TryGetValue(instance.Id, out var running) && running;
 
@@ -24,13 +30,17 @@ public class ServerProcessService
     {
         if (IsRunning(instance)) return Task.FromResult(false);
 
+        // the registry stores host paths; in a container the server dir is
+        // the mounted equivalent
+        var serverDir = _paths.ToContainerPath(instance.ServerDir);
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         { // windows untested. cmd /c start spawns an independent process
             Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 Arguments = "/c start \"Minecraft Server\" java -Xmx4G -Xms2G -jar server.jar nogui",
-                WorkingDirectory = instance.ServerDir,
+                WorkingDirectory = serverDir,
                 UseShellExecute = true
             });
         }
@@ -38,12 +48,16 @@ public class ServerProcessService
         {
             // setsid detaches from our process group, sh -c backgrounds java and redirects
             // its output to a file so nothing is tied to the backend
-            var log = Path.Combine(instance.ServerDir, "manager-start.log");
+            var log = Path.Combine(serverDir, "manager-start.log");
+            // java comes from JAVA_HOME when set (a host jdk mounted into the
+            // container), otherwise the image's java on PATH
+            var javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+            var java = string.IsNullOrEmpty(javaHome) ? "java" : Path.Combine(javaHome, "bin", "java");
             var psi = new ProcessStartInfo
             {
                 FileName = "setsid",
-                Arguments = $"sh -c \"java -Xmx4G -Xms2G -jar server.jar nogui >> '{log}' 2>&1 < /dev/null &\"",
-                WorkingDirectory = instance.ServerDir,
+                Arguments = $"sh -c \"{java} -Xmx4G -Xms2G -jar server.jar nogui >> '{log}' 2>&1 < /dev/null &\"",
+                WorkingDirectory = serverDir,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -80,7 +94,7 @@ public class ServerProcessService
 
     public IEnumerable<string> GetRecentLogs(ServerInstance instance)
     {
-        var logFilePath = Path.Combine(instance.ServerDir, "logs", "latest.log");
+        var logFilePath = Path.Combine(_paths.ToContainerPath(instance.ServerDir), "logs", "latest.log");
         if (!File.Exists(logFilePath)) return [];
 
         return TailLines(logFilePath, LogsToStore);

@@ -8,9 +8,18 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ServerRegistry>();
+builder.Services.AddSingleton<PathTranslator>();
 builder.Services.AddSingleton<ServerProcessService>();
 builder.Services.AddTransient<MinecraftQueryService>();
 builder.Services.AddHostedService<LogWatcherService>();
+
+// in a container the registry writes servers.json to a mounted volume;
+// outside, it stays at the content root as before
+var registryPath = Environment.GetEnvironmentVariable("SERVER_REGISTRY_PATH");
+if (!string.IsNullOrEmpty(registryPath))
+{
+    builder.Configuration["RegistryPath"] = registryPath;
+}
 
 // register signalR
 builder.Services.AddSignalR();
@@ -39,7 +48,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// https is only wired up for local dev; in a container nginx terminates
+// plain http, so redirecting would bounce requests to a dead https port
+if (!string.Equals(app.Environment.EnvironmentName, "Production", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowFrontend");
 

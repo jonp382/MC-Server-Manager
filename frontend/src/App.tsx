@@ -16,7 +16,8 @@ import {
   fetchLogs,
 } from './services/API';
 
-const API_URL = 'http://localhost:5029';
+// relative so vite's dev proxy and the nginx container proxy both work
+const API_URL = '';
 
 export default function App() {
   // signalR connection

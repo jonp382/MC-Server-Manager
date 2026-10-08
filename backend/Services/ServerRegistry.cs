@@ -18,7 +18,12 @@ public class ServerRegistry
     public ServerRegistry(IConfiguration config, IHostEnvironment env)
     {
         _config = config;
-        _filePath = Path.Combine(env.ContentRootPath, "servers.json");
+        // RegistryPath lets docker point the registry at a mounted volume
+        var configured = config["RegistryPath"];
+        _filePath = string.IsNullOrEmpty(configured)
+            ? Path.Combine(env.ContentRootPath, "servers.json")
+            : configured;
+        Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
         Load();
     }
 
