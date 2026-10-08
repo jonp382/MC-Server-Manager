@@ -1,0 +1,5 @@
+bin/
+obj/
+*.http
+Properties/
+appsettings.Development.json

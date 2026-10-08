@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    # no ports mapping: only nginx talks to the backend, and the browser
+    # reaches it through the /api and /hubs proxies on the frontend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:5029
+      # servers.json lives on the mounted volume so it survives rebuilds
+      - SERVER_REGISTRY_PATH=/app/data/servers.json
+    volumes:
+      - server-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5029/api/server/servers"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  server-data:

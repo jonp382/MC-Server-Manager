@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5029';
+const API_URL = '';
 
 export interface ServerInstance {
   id: string;
