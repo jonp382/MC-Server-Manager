@@ -1,33 +1,64 @@
-using System;
 using Microsoft.AspNetCore.Mvc;
+using MinecraftServerManager.Models;
 using MinecraftServerManager.Services;
-using System.Net;
-using System.Diagnostics;
-using System.Globalization;
 
 namespace MinecraftServerManager.Controllers;
 
-public record CommandRequest(string Command, string? ServerIp, long rconPort, string rconPassword);
+public record CommandRequest(string ServerId, string Command);
 
 [ApiController]
 [Route("api/[controller]")]
 public class ServerController : ControllerBase
 {
-    private readonly IMinecraftProcessService _processService;
+    private readonly ServerRegistry _registry;
+    private readonly ServerProcessService _processService;
     private readonly MinecraftQueryService _queryService;
 
-    public ServerController(IMinecraftProcessService processService, MinecraftQueryService queryService)
+    public ServerController(ServerRegistry registry, ServerProcessService processService, MinecraftQueryService queryService)
     {
+        _registry = registry;
         _processService = processService;
         _queryService = queryService;
     }
 
-    [HttpGet("status")]
-    public async Task<IActionResult> GetStatus(string? ip = null, int? port = null)
+    // instance crud, servers.json is the source of truth
+    [HttpGet("servers")]
+    public IActionResult GetServers() => Ok(_registry.GetAll());
+
+    [HttpPost("servers")]
+    public IActionResult CreateServer([FromBody] ServerInstance instance)
     {
+        var created = _registry.Create(instance);
+        return Ok(created);
+    }
+
+    [HttpPut("servers")]
+    public IActionResult UpdateServer([FromBody] ServerInstance instance)
+    {
+        if (!_registry.Update(instance))
+            return NotFound(new { error = $"server {instance.Id} not found" });
+        return Ok(instance);
+    }
+
+    [HttpDelete("servers/{id}")]
+    public IActionResult DeleteServer(string id)
+    {
+        if (!_registry.Delete(id))
+            return NotFound(new { error = $"server {id} not found" });
+        return Ok(new { deleted = id });
+    }
+
+    private ServerInstance? Resolve(string id) => _registry.Get(id);
+
+    [HttpGet("status")]
+    public async Task<IActionResult> GetStatus(string id)
+    {
+        var instance = Resolve(id);
+        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+
         try
         {
-            var status = await _queryService.QueryServerAsync(ip, port);
+            var status = await _queryService.QueryServerAsync(instance.Ip, instance.QueryPort);
             return Ok(new { status.IsOnline });
         }
         catch (Exception ex)
@@ -37,11 +68,14 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("logs")]
-    public IActionResult GetLogs()
+    public IActionResult GetLogs(string id)
     {
+        var instance = Resolve(id);
+        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+
         try
         {
-            var logs = _processService.GetRecentLogs();
+            var logs = _processService.GetRecentLogs(instance);
             return Ok(new { logs });
         }
         catch (Exception ex)
@@ -51,11 +85,14 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("players")]
-    public async Task<IActionResult> GetPlayers(string? ip = null, int? port = null)
+    public async Task<IActionResult> GetPlayers(string id)
     {
+        var instance = Resolve(id);
+        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+
         try
         {
-            var status = await _queryService.QueryServerAsync(ip, port);
+            var status = await _queryService.QueryServerAsync(instance.Ip, instance.QueryPort);
             return Ok(new { status.OnlinePlayers });
         }
         catch (Exception ex)
@@ -67,26 +104,34 @@ public class ServerController : ControllerBase
     [HttpPost("command")]
     public async Task<IActionResult> SendCommand([FromBody] CommandRequest req)
     {
+        var instance = Resolve(req.ServerId);
+        if (instance == null) return NotFound(new { success = false, error = $"server {req.ServerId} not found" });
+
         try
         {
-            string response = await _processService.SendCommand(req.Command, req.ServerIp, req.rconPort, req.rconPassword);
-            return Ok(new {success = true, response});
+            // ip, rcon port and password come from the instance, not from the browser
+            string response = await _processService.SendCommand(instance, req.Command);
+            return Ok(new { success = true, response });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new {success = false, error = ex.Message});
+            return StatusCode(500, new { success = false, error = ex.Message });
         }
     }
 
     [HttpPost("start")]
-    public async Task<IActionResult> StartServer()
+    public async Task<IActionResult> StartServer(string id)
     {
+        var instance = Resolve(id);
+        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+
         try
         {
-            bool result = await _processService.StartServer();
-            return Accepted(new { status = "Server started as new process" });
+            bool result = await _processService.StartServer(instance);
+            if (!result) return Conflict(new { message = "server is already started" });
+            return Accepted(new { status = "Server started as detached process" });
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             return StatusCode(500, new { error = $"Failed to start server: {ex.Message}" });
         }
@@ -96,19 +141,7 @@ public class ServerController : ControllerBase
     public async Task<IActionResult> StopServer([FromBody] CommandRequest req)
     {
         // use the same structure as sendcommand but just ignore the command and hard-code stop.
-        try
-        {
-            CommandRequest customRequest = req with
-            {
-                Command="stop"
-            };
-            
-            await SendCommand(customRequest);
-            return Accepted(new {status = "Server stopped via RCON"});
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = $"Failed to stop server: {ex.Message}" });
-        }
+        req = req with { Command = "stop" };
+        return await SendCommand(req);
     }
 }

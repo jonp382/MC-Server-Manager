@@ -1,6 +1,5 @@
 using MinecraftServerManager.Hubs;
 using MinecraftServerManager.Services;
-using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,20 +7,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHostedService<LogWatcherService>();
-builder.Services.AddSingleton<MinecraftProcessService>();
+builder.Services.AddSingleton<ServerRegistry>();
+builder.Services.AddSingleton<ServerProcessService>();
 builder.Services.AddTransient<MinecraftQueryService>();
+builder.Services.AddHostedService<LogWatcherService>();
 
-// register signalR 
+// register signalR
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<IMinecraftProcessService, MinecraftProcessService>();
 
 // CORS configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://0.0.0.0:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -29,6 +28,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// seed the registry so the log watcher has instances on first run
+app.Services.GetRequiredService<ServerRegistry>();
 
 // http requests and swagger for dev testing
 if (app.Environment.IsDevelopment())
@@ -46,14 +48,5 @@ app.UseAuthorization();
 // end points
 app.MapControllers();
 app.MapHub<ConsoleHub>("/hubs/ConsoleHub");
-
-// signalR
-var processService = app.Services.GetRequiredService<IMinecraftProcessService>();
-var hubContext = app.Services.GetRequiredService<IHubContext<ConsoleHub>>();
-
-processService.OutputReceived += async (line) =>
-{
-    await hubContext.Clients.All.SendAsync("ReceiveLogLine", line);
-};
 
 app.Run();

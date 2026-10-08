@@ -4,8 +4,17 @@ import * as signalR from '@microsoft/signalr';
 import { Header } from './components/Header';
 import { PlayerList } from './components/PlayerList';
 import { TerminalConsole, LogMessage } from './components/TerminalConsole';
-import { startServer, stopServer, targetQuery } from './services/API';
-import { ServerSettings } from './components/SettingsModal';
+import {
+  ServerInstance,
+  fetchServers,
+  createServer,
+  updateServer,
+  startServer,
+  stopServer,
+  fetchStatus,
+  fetchPlayers,
+  fetchLogs,
+} from './services/API';
 
 const API_URL = 'http://localhost:5029';
 
@@ -15,34 +24,40 @@ export default function App() {
 
   const [isConnected, setIsConnected] = useState(false);
   const [serverStatus, setServerStatus] = useState<'Stopped' | 'Starting' | 'Running'>('Stopped');
-  const [logs, setLogs] = useState<LogMessage[]>([]);
   const [players, setPlayers] = useState<string[]>([]);
 
-  const [serverSettings, setServerSettings] = useState<ServerSettings>(() => {
-    const saved = localStorage.getItem('mc_server_settings');
-    // old saved settings have no serverIp, default it to localhost
-    return saved ? { serverIp: '127.0.0.1', ...JSON.parse(saved) } : { serverIp: '127.0.0.1', queryPort: 25565, rconPort: 25575, rconPassword: '' };
-  });
+  // instances from the registry, and which one the UI is pointed at
+  const [instances, setInstances] = useState<ServerInstance[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
 
-  const handleSaveSettings = (newSettings: ServerSettings) => {
-    setServerSettings(newSettings);
-    localStorage.setItem('mc_server_settings', JSON.stringify(newSettings));
-    
-  };
+  // logs are kept per server so switching servers doesn't mix consoles
+  const [logsByServer, setLogsByServer] = useState<Record<string, LogMessage[]>>({});
 
-  // append system/console logs
-  const appendLog = (message: string) => {
+  const appendLog = (serverId: string, message: string) => {
     const newLog: LogMessage = {
       id: Math.random().toString(36).substring(2, 9),
       text: message,
       timestamp: new Date().toLocaleTimeString(),
     };
-    setLogs((prev) => [...prev.slice(-499), newLog]); // Retain last 500 lines
+    setLogsByServer((prev) => ({
+      ...prev,
+      [serverId]: [...(prev[serverId] ?? []).slice(-499), newLog], // retain last 500 lines
+    }));
   };
 
   const onClearLogs = () => {
-    setLogs([]);
+    setLogsByServer((prev) => ({ ...prev, [activeId]: [] }));
   };
+
+  // load the registry on mount, point at the first server
+  useEffect(() => {
+    fetchServers()
+      .then((list) => {
+        setInstances(list);
+        if (list.length > 0) setActiveId(list[0].id);
+      })
+      .catch((err) => console.error('Failed to load servers:', err));
+  }, []);
 
   // establish SignalR connection on component mount
   useEffect(() => {
@@ -63,9 +78,9 @@ export default function App() {
         setIsConnected(true);
         console.log('Connected to SignalR ConsoleHub');
 
-        // Console Log Stream
-        connection.on('ReceiveLogLine', (line: string) => {
-          appendLog(line);
+        // Console Log Stream, lines arrive tagged with the server they came from
+        connection.on('ReceiveLogLine', (serverId: string, line: string) => {
+          appendLog(serverId, line);
         });
 
         // Server Status Stream
@@ -97,38 +112,23 @@ export default function App() {
   }, [connection]);
 
   const fetchServerStatus = async () => {
+    if (!activeId) return;
     try {
-      const response = await fetch(`${API_URL}/api/server/status${targetQuery(serverSettings.serverIp, serverSettings.queryPort)}`);
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
-      }
-
-      // Log the JSON data to the console
-      const data = await response.json();
-      console.info(`Server status JSON:`, data);
-
-      setServerStatus(data.isOnline ? 'Running' : 'Stopped');
+      const online = await fetchStatus(activeId);
+      setServerStatus(online ? 'Running' : 'Stopped');
     } catch (err) {
-      console.error("Error fetching server status:", err);
+      console.error('Error fetching server status:', err);
       setServerStatus('Stopped');
     }
   };
 
   const fetchCurrentPlayers = async () => {
+    if (!activeId) return;
     try {
-      const response = await fetch(`${API_URL}/api/server/players${targetQuery(serverSettings.serverIp, serverSettings.queryPort)}`);
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
-      }
-
-      // Log the JSON data to the console
-      const data = await response.json();
-      const players : string[] = data.onlinePlayers;
-      console.info(`Current Players JSON:`, players);
-
-      setPlayers(players);
+      const list = await fetchPlayers(activeId);
+      setPlayers(list);
     } catch (err) {
-      console.error("Error fetching server status:", err);
+      console.error('Error fetching players:', err);
       setPlayers([]);
     }
   };
@@ -136,40 +136,41 @@ export default function App() {
   useEffect(() => {
     fetchServerStatus();
     fetchCurrentPlayers();
-  }, [serverSettings]);
+  }, [activeId]);
+
+  // add mode (empty id) creates, edit mode saves back to the registry
+  const handleSaveSettings = async (instance: ServerInstance) => {
+    try {
+      if (!instance.id) {
+        const created = await createServer(instance);
+        setActiveId(created.id);
+      } else {
+        await updateServer(instance);
+      }
+      setInstances(await fetchServers());
+    } catch (err) {
+      console.error('Failed to save server:', err);
+    }
+  };
 
   const handleRetrieveLogs = async () => {
+    if (!activeId) return;
     try {
-      // Replace with your actual backend endpoint URL
-      const response = await fetch(`${API_URL}/api/server/logs`);
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
-      }
+      const rawLogs = await fetchLogs(activeId);
 
-      const json = await response.json();
-      const rawLogs: string[] = json.logs || [];
-      
       const parsedLogs: LogMessage[] = rawLogs.map((logText, index) => ({
         id: `${Date.now()}-${index}`,
         text: logText,
         timestamp: new Date().toLocaleTimeString(),
       }));
-      
+
       // update state with fetched logs
-      setLogs(parsedLogs);
+      setLogsByServer((prev) => ({ ...prev, [activeId]: parsedLogs }));
     } catch (err) {
       console.error('Failed to retrieve logs:', err);
-     
-      setLogs((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(36).substring(2, 9),
-          text: `[SYSTEM ERROR] Failed to fetch historical logs: ${err}`,
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
+      appendLog(activeId, `[SYSTEM ERROR] Failed to fetch historical logs: ${err}`);
     }
-  }
+  };
 
   // Query the backend every 3 seconds
   useEffect(() => {
@@ -180,30 +181,31 @@ export default function App() {
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, [serverSettings]);
+  }, [activeId]);
+
+  const logs = logsByServer[activeId] ?? [];
 
   return (
     <div className="bg-slate-950 text-slate-100 p-6 w-screen h-screen font-sans overflow-hidden">
       <Header
+        instances={instances}
+        activeId={activeId}
+        onSelect={setActiveId}
         serverStatus={serverStatus}
         isConnected={isConnected}
-        onStart={() => startServer(appendLog)}
-        onStop={() => stopServer(appendLog, serverSettings.serverIp, serverSettings.rconPort, serverSettings.rconPassword)}
-        settings={serverSettings}
+        onStart={() => startServer((msg) => appendLog(activeId, msg), activeId)}
+        onStop={() => stopServer((msg) => appendLog(activeId, msg), activeId)}
         onSaveSettings={handleSaveSettings}
       />
 
       <div className="gap-6 flex-1 min-h-0">
         <TerminalConsole
           logs={logs}
+          serverId={activeId}
           isConnected={isConnected}
-          onCommandExecution={(errText) => appendLog(errText)}
+          onCommandExecution={(errText) => appendLog(activeId, errText)}
           onClearLogs={onClearLogs}
           onRetrieveLogs={handleRetrieveLogs}
-
-          serverIp={serverSettings.serverIp}
-          rconPort={serverSettings.rconPort}
-          rconPassword={serverSettings.rconPassword}
         />
 
         <PlayerList players={players} />

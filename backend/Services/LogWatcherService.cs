@@ -2,49 +2,95 @@ namespace MinecraftServerManager.Services;
 
 using Microsoft.AspNetCore.SignalR;
 using MinecraftServerManager.Hubs;
+using MinecraftServerManager.Models;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
+// one watcher per server instance, reconciled against the registry
 public sealed class LogWatcherService : BackgroundService
 {
     private readonly IHubContext<ConsoleHub> _hubContext;
     private readonly ILogger<LogWatcherService> _logger;
+    private readonly ServerRegistry _registry;
 
-    private readonly string _logFilePath;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _watchers = new();
+    private CancellationToken _stoppingToken;
 
     public LogWatcherService(
         IHubContext<ConsoleHub> hubContext,
         ILogger<LogWatcherService> logger,
-        IConfiguration config)
+        ServerRegistry registry)
     {
         _hubContext = hubContext;
         _logger = logger;
-
-        var serverDir = config["Minecraft:ServerDir"]
-            ?? throw new InvalidOperationException("Minecraft:ServerDir is not set in appsettings");
-        _logFilePath = Path.Combine(serverDir, "logs", "latest.log");
+        _registry = registry;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation(
-            "LogWatcherService started watching {Path}",
-            _logFilePath);
-
-        long position = 0;
+        _stoppingToken = stoppingToken;
+        _registry.Changed += Reconcile;
+        Reconcile();
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            await Task.Delay(1000, stoppingToken);
+        }
+
+        foreach (var cts in _watchers.Values) cts.Cancel();
+        _registry.Changed -= Reconcile;
+
+        _logger.LogInformation("LogWatcherService stopped.");
+    }
+
+    private void Reconcile()
+    {
+        var instances = _registry.GetAll().ToDictionary(i => i.Id);
+
+        // stop watchers for removed instances
+        foreach (var id in _watchers.Keys.ToList())
+        {
+            if (!instances.ContainsKey(id))
+            {
+                _watchers[id].Cancel();
+                _watchers.TryRemove(id, out _);
+            }
+        }
+
+        // attach watchers for new instances
+        foreach (var instance in instances.Values)
+        {
+            if (_watchers.ContainsKey(instance.Id)) continue;
+
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
+            _watchers[instance.Id] = cts;
+            _ = WatchLoop(instance, cts.Token);
+        }
+    }
+
+    private async Task WatchLoop(ServerInstance instance, CancellationToken token)
+    {
+        var logFilePath = Path.Combine(instance.ServerDir, "logs", "latest.log");
+
+        _logger.LogInformation(
+            "LogWatcherService started watching {Path} for {Name}",
+            logFilePath,
+            instance.Name);
+
+        while (!token.IsCancellationRequested)
+        {
             try
             {
-                if (!File.Exists(_logFilePath))
+                if (!File.Exists(logFilePath))
                 {
-                    await Task.Delay(500, stoppingToken);
+                    await Task.Delay(500, token);
                     continue;
                 }
 
                 await using var stream = new FileStream(
-                    _logFilePath,
+                    logFilePath,
                     FileMode.Open,
                     FileAccess.Read,
                     FileShare.ReadWrite | FileShare.Delete,
@@ -53,9 +99,9 @@ public sealed class LogWatcherService : BackgroundService
 
                 // seek to end to read new lines
                 stream.Seek(0, SeekOrigin.End);
-                position = stream.Position;
+                long position = stream.Position;
 
-                var identity = GetFileIdentity(_logFilePath);
+                var identity = GetFileIdentity(logFilePath);
                 var lastIdentityCheck = DateTime.UtcNow;
 
                 _logger.LogInformation(
@@ -66,10 +112,10 @@ public sealed class LogWatcherService : BackgroundService
                 var buffer = new byte[8192];
                 var pending = new StringBuilder();
 
-                while (!stoppingToken.IsCancellationRequested)
+                while (!token.IsCancellationRequested)
                 {
                     // check whether the latest.log file was replaced by a new server instance
-                    if (!File.Exists(_logFilePath))
+                    if (!File.Exists(logFilePath))
                     {
                         _logger.LogInformation(
                             "Minecraft log disappeared. Reattaching...");
@@ -82,7 +128,7 @@ public sealed class LogWatcherService : BackgroundService
                     {
                         lastIdentityCheck = DateTime.UtcNow;
 
-                        var currentIdentity = GetFileIdentity(_logFilePath);
+                        var currentIdentity = GetFileIdentity(logFilePath);
 
                         if (currentIdentity != identity)
                         {
@@ -95,7 +141,7 @@ public sealed class LogWatcherService : BackgroundService
                         }
                     }
 
-                    var currentLength = new FileInfo(_logFilePath).Length;
+                    var currentLength = new FileInfo(logFilePath).Length;
 
                     // file was truncated in-place.
                     if (currentLength < position)
@@ -110,13 +156,11 @@ public sealed class LogWatcherService : BackgroundService
 
                     stream.Position = position;
 
-                    var bytesRead = await stream.ReadAsync(
-                        buffer,
-                        stoppingToken);
+                    var bytesRead = await stream.ReadAsync(buffer, token);
 
                     if (bytesRead == 0)
                     {
-                        await Task.Delay(100, stoppingToken);
+                        await Task.Delay(100, token);
                         continue;
                     }
 
@@ -145,14 +189,16 @@ public sealed class LogWatcherService : BackgroundService
                             "[MC LOG] {Line}",
                             line);
 
+                        // lines carry the instance id so the frontend can filter by active server
                         await _hubContext.Clients.All.SendAsync(
                             "ReceiveLogLine",
+                            instance.Id,
                             line,
-                            stoppingToken);
+                            token);
                     }
                 }
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 break;
             }
@@ -164,10 +210,8 @@ public sealed class LogWatcherService : BackgroundService
             }
 
             // small delay before trying to attach again.
-            await Task.Delay(500, stoppingToken);
+            try { await Task.Delay(500, token); } catch (OperationCanceledException) { break; }
         }
-
-        _logger.LogInformation("LogWatcherService stopped.");
     }
 
     private static string GetFileIdentity(string path)
