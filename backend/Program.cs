@@ -50,7 +50,7 @@ if (app.Environment.IsDevelopment())
 
 // https is only wired up for local dev; in a container nginx terminates
 // plain http, so redirecting would bounce requests to a dead https port
-if (!Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").Equals("Production", StringComparison.OrdinalIgnoreCase))
+if (!string.Equals(app.Environment.EnvironmentName, "Production", StringComparison.OrdinalIgnoreCase))
 {
     app.UseHttpsRedirection();
 }
