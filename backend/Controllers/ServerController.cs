@@ -21,7 +21,7 @@ public class ServerController : ControllerBase
         _queryService = queryService;
     }
 
-    // instance crud, servers.json is the source of truth
+    // the single instance, servers.json is the source of truth
     [HttpGet("servers")]
     public IActionResult GetServers() => Ok(_registry.GetAll());
 
@@ -38,14 +38,6 @@ public class ServerController : ControllerBase
         if (!_registry.Update(instance))
             return NotFound(new { error = $"server {instance.Id} not found" });
         return Ok(instance);
-    }
-
-    [HttpDelete("servers/{id}")]
-    public IActionResult DeleteServer(string id)
-    {
-        if (!_registry.Delete(id))
-            return NotFound(new { error = $"server {id} not found" });
-        return Ok(new { deleted = id });
     }
 
     private ServerInstance? Resolve(string id) => _registry.Get(id);

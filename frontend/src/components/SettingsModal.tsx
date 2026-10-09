@@ -3,10 +3,11 @@ import { Settings, X, Radio, ShieldCheck, Globe, EyeOff, Eye, Folder } from 'luc
 import { ServerInstance } from '../services/API';
 
 interface SettingsModalProps {
-  instance: ServerInstance | null; // null = add a new server
+  instance: ServerInstance | null; // the registry's instance, null when empty
   onSave: (instance: ServerInstance) => void;
 }
 
+// the form template used when the registry is empty
 const blank: ServerInstance = {
   id: '',
   name: '',
@@ -17,9 +18,10 @@ const blank: ServerInstance = {
   rconPassword: '',
 };
 
-// one editor for both add and edit. add gets a blank template, edit gets the active instance.
+// single server editor: edits the one instance in the registry.
+// never disabled: with an empty registry the form opens on the blank
+// template and saving creates the instance.
 export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }) => {
-  const isAdd = instance === null;
   const [isOpen, setIsOpen] = useState(false);
   const [formState, setFormState] = useState<ServerInstance>(instance ?? blank);
   const [showRconPassword, setShowRconPassword] = useState(false);
@@ -41,10 +43,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
       <button
         onClick={open}
         className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-mono"
-        title={isAdd ? 'Add Server' : 'Edit Server'}
+        title="Edit Server"
       >
         <Settings size={16} className="text-slate-400 hover:rotate-45 transition-transform duration-300" />
-        <span className="hidden sm:inline">{isAdd ? 'Add Server' : 'Settings'}</span>
+        <span className="hidden sm:inline">Settings</span>
       </button>
 
       {/* modal window */}
@@ -55,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
             <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 <Settings size={18} className="text-emerald-400" />
-                {isAdd ? 'Add Server' : 'Edit Server'}
+                {instance ? 'Edit Server' : 'Configure Server'}
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
@@ -185,7 +187,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
                   type="submit"
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
                 >
-                  {isAdd ? 'Add Server' : 'Save'}
+                  {instance ? 'Save' : 'Create'}
                 </button>
               </div>
 

@@ -4,15 +4,15 @@ using MinecraftServerManager.Models;
 namespace MinecraftServerManager.Services;
 
 // servers.json on disk is the source of truth, no database.
-// seeded from appsettings on first run so an existing single-server setup keeps working.
+// single server: the registry holds one instance, seeded from appsettings on first run.
 public class ServerRegistry
 {
     private readonly string _filePath;
     private readonly IConfiguration _config;
-    private readonly List<ServerInstance> _instances = new();
+    private ServerInstance? _instance;
     private readonly object _lock = new();
 
-    // fires when instances are added/removed/updated so the log watcher can reconcile
+    // fires when the instance is added/updated so the log watcher can reconcile
     public event Action? Changed;
 
     public ServerRegistry(IConfiguration config, IHostEnvironment env)
@@ -29,12 +29,12 @@ public class ServerRegistry
 
     public IEnumerable<ServerInstance> GetAll()
     {
-        lock (_lock) return _instances.ToList();
+        lock (_lock) return _instance is null ? [] : new[] { _instance };
     }
 
     public ServerInstance? Get(string id)
     {
-        lock (_lock) return _instances.FirstOrDefault(i => i.Id == id);
+        lock (_lock) return _instance?.Id == id ? _instance : null;
     }
 
     public ServerInstance Create(ServerInstance instance)
@@ -42,7 +42,7 @@ public class ServerRegistry
         lock (_lock)
         {
             instance.Id = Guid.NewGuid().ToString("N");
-            _instances.Add(instance);
+            _instance = instance;
             Save();
         }
         Changed?.Invoke();
@@ -53,24 +53,9 @@ public class ServerRegistry
     {
         lock (_lock)
         {
-            var existing = _instances.FirstOrDefault(i => i.Id == instance.Id);
-            if (existing == null) return false;
+            if (_instance == null || _instance.Id != instance.Id) return false;
 
-            _instances[_instances.IndexOf(existing)] = instance;
-            Save();
-        }
-        Changed?.Invoke();
-        return true;
-    }
-
-    public bool Delete(string id)
-    {
-        lock (_lock)
-        {
-            var existing = _instances.FirstOrDefault(i => i.Id == id);
-            if (existing == null) return false;
-
-            _instances.Remove(existing);
+            _instance = instance;
             Save();
         }
         Changed?.Invoke();
@@ -82,26 +67,28 @@ public class ServerRegistry
         if (File.Exists(_filePath))
         {
             var loaded = JsonSerializer.Deserialize<List<ServerInstance>>(File.ReadAllText(_filePath));
-            if (loaded != null) _instances.AddRange(loaded);
+            if (loaded is { Count: > 0 }) _instance = loaded[0];
         }
 
         // seed from appsettings so the old single-server config carries over
-        if (_instances.Count == 0 && _config["Minecraft:ServerDir"] != null)
+        if (_instance == null && _config["Minecraft:ServerDir"] != null)
         {
-            _instances.Add(new ServerInstance
+            _instance = new ServerInstance
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Name = "Default Server",
                 ServerDir = _config["Minecraft:ServerDir"]!,
                 Ip = _config["Minecraft:ServerIp"] ?? "127.0.0.1",
                 QueryPort = int.TryParse(_config["Minecraft:QueryPort"], out var qp) ? qp : 25565,
-            });
+            };
             Save();
         }
     }
 
     private void Save()
     {
-        File.WriteAllText(_filePath, JsonSerializer.Serialize(_instances, new JsonSerializerOptions { WriteIndented = true }));
+        // keep the file a list so existing volume data loads unchanged
+        var list = _instance is null ? new List<ServerInstance>() : new List<ServerInstance> { _instance };
+        File.WriteAllText(_filePath, JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

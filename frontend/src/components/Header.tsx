@@ -4,9 +4,7 @@ import { SettingsModal } from './SettingsModal';
 import { ServerInstance } from '../services/API';
 
 interface HeaderProps {
-    instances: ServerInstance[];
-    activeId: string;
-    onSelect: (id: string) => void;
+    instance: ServerInstance | null;
     serverStatus: string;
     isConnected: boolean;
     onStart: () => void;
@@ -15,16 +13,13 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-    instances,
-    activeId,
-    onSelect,
+    instance,
     serverStatus,
     isConnected,
     onStart,
     onStop,
     onSaveSettings,
 }) => {
-    const active = instances.find((i) => i.id === activeId) ?? null;
     const isRunning = serverStatus === 'Running';
     const isStopped = serverStatus === 'Stopped';
 
@@ -46,33 +41,21 @@ export const Header: React.FC<HeaderProps> = ({
                         {serverStatus}
                     </span>
                 </p>
-                {active && (
+                {instance && (
                     <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
                         Targeting:
                         <span className="text-slate-200 font-semibold font-mono">
-                            {active.ip}:{active.queryPort}
+                            {instance.ip}:{instance.queryPort}
                         </span>
                     </p>
                 )}
             </div>
 
-            {/* server selector + start/stop + settings */}
+            {/* start/stop + settings for the single server */}
             <div className="flex items-center gap-3">
-                <select
-                    value={activeId}
-                    onChange={(e) => onSelect(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 text-xs font-mono focus:outline-none focus:border-slate-600"
-                >
-                    {instances.length === 0 && <option value="">no servers</option>}
-                    {instances.map((i) => (
-                        <option key={i.id} value={i.id}>{i.name}</option>
-                    ))}
-                    <option value="">+ add server</option>
-                </select>
-
                 <button
                     onClick={onStart}
-                    disabled={!isStopped || !isConnected || !active}
+                    disabled={!isStopped || !isConnected || !instance}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm rounded-lg transition shadow-lg shadow-emerald-950/40"
                 >
                     <Play size={16} fill="currentColor" />
@@ -81,15 +64,14 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                     onClick={onStop}
-                    disabled={!isRunning || !isConnected || !active}
+                    disabled={!isRunning || !isConnected || !instance}
                     className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:hover:bg-rose-600 text-white font-medium text-xs sm:text-sm rounded-lg transition shadow-lg shadow-rose-950/40"
                 >
                     <Square size={16} fill="currentColor" />
                     Stop Server
                 </button>
 
-                {/* settings button, add mode when no server is active */}
-                <SettingsModal instance={active} onSave={onSaveSettings} />
+                <SettingsModal instance={instance} onSave={onSaveSettings} />
 
             </div>
         </header>

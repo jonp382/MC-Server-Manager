@@ -10,13 +10,15 @@ export interface ServerInstance {
   rconPassword: string;
 }
 
-// instance crud, servers.json is the source of truth on the backend
+// single server: the backend keeps one instance in servers.json.
+// the frontend reads it and saves settings back to it.
 export const fetchServers = async (): Promise<ServerInstance[]> => {
   const res = await fetch(`${API_URL}/api/server/servers`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 };
 
+// first-run bootstrap: creates the single instance when the registry is empty
 export const createServer = async (instance: ServerInstance): Promise<ServerInstance> => {
   const res = await fetch(`${API_URL}/api/server/servers`, {
     method: 'POST',
@@ -35,11 +37,6 @@ export const updateServer = async (instance: ServerInstance): Promise<ServerInst
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
-};
-
-export const deleteServer = async (id: string): Promise<void> => {
-  const res = await fetch(`${API_URL}/api/server/servers/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 };
 
 export const fetchStatus = async (id: string): Promise<boolean> => {

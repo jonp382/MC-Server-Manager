@@ -42,5 +42,27 @@ services:
       backend:
         condition: service_healthy
 
+  # a minecraft server as a container on the compose network. rcon/status
+  # from the backend reaches it by service name (bridge dns), no host
+  # networking involved, so it works on machines where container->host is
+  # firewalled. the server writes logs into the mounted folder, which the
+  # backend tails through the same parent mount.
+  # in the ui, the instance ip is the service name ("minecraft"), not 127.0.0.1.
+  minecraft:
+    image: itzg/minecraft-server
+    environment:
+      - EULA=TRUE
+      - VERSION=1.21.4
+      - ENABLE_RCON=true
+      - RCON_PORT=25575
+      - RCON_PASSWORD=test_password
+    volumes:
+      # a host server folder becomes the container's data dir; existing
+      # worlds, mods, and server.properties are used as-is
+      - /path/to/minecraft-servers/my-server:/data
+    ports:
+      # optional: only needed to join the server from outside docker
+      - "25565:25565"
+
 volumes:
   server-data:
