@@ -31,10 +31,10 @@ The point is to watch and drive servers from a browser instead of a terminal win
 docker compose up -d
 ```
 
-Two things to set per machine, in `docker-compose.yml`:
+Two things to set per machine, in `docker-compose.yml`. Both appear in the `volumes:` and `environment:` blocks, and the two sides must be the same path:
 
-- **Server folders.** The registry stores host paths (the folder you pick in the UI). The backend container sees them through one parent mount: `MSM_SERVER_ROOT` is the host folder, `MSM_SERVER_MOUNT` is where the container sees it, and instance paths are translated at the filesystem boundary. Every server folder under the parent is covered, so adding a server in the UI needs no compose change.
-- **Java.** The image ships no Java. The container spawns servers with `JAVA_HOME/bin/java` when set, plain `java` on PATH otherwise. Mount the JDK your servers need (Adoptium, Oracle, any flavor, any version) and point `JAVA_HOME` at it:
+- **Server folders.** The registry stores host paths (the folder you pick in the UI), and the backend container cannot see host paths directly. Mount one parent folder that contains all your server folders, and tell the backend what it is: `MSM_SERVER_ROOT` is the host folder (identical to the volume's left side), `MSM_SERVER_MOUNT` is the container path (identical to the volume's right side). The backend translates instance paths between the two at the filesystem boundary. Every server folder under the parent is covered, so adding a server in the UI needs no compose change. A `serverDir` outside the parent is not translated and fails with a missing-path error.
+- **Java.** The image ships no Java, so `java` on PATH does not exist in the container and the Start button fails. The container spawns servers with `JAVA_HOME/bin/java` when set. Mount the JDK your servers need (Adoptium, Oracle, any flavor, any version) and point `JAVA_HOME` at the JDK's **home directory** (the folder containing `bin/java`), not at the `java` binary. If your JDK folder is nested (e.g. `jdk-21/jdk-21/`), point at the inner folder that holds `bin`.
 
 ```yaml
 volumes:
@@ -48,7 +48,7 @@ environment:
 
 The backend writes `servers.json` to a named volume (`server-data`) so the registry survives rebuilds.
 
-**RCON and status to servers on the host** need `network_mode: "host"` on the backend (it is commented out in the compose file). On the host network the compose service name has no DNS, so nginx proxies through the host's docker bridge gateway instead of `backend`. The host gateway is firewalled on some machines; if the proxy times out, keep the default bridge and set the instance `ip` to the host's LAN address.
+**RCON and status to servers on the host** need `network_mode: "host"` on the backend (it is commented out in the compose file): a container on the compose bridge cannot reach the host's ports, so RCON to a host-run server times out. On the host network the compose service name has no DNS, so nginx proxies through the host's docker bridge gateway instead of `backend` — edit `frontend/nginx.conf`'s `proxy_pass` targets to the gateway address (find it with `ip -br addr | grep docker0`). The host gateway is firewalled on some machines (UFW's default deny drops container-to-host traffic); if the proxy times out, allow the docker subnet in the firewall, keep the default bridge and set the instance `ip` to the host's LAN address, or run the server in a container on the compose network so RCON is container-to-container.
 
 ## Getting started
 
