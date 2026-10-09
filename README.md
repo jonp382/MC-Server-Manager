@@ -31,7 +31,9 @@ Once these have been configured, in a terminal, run
 
 ```docker compose up -d```
 
- It will launch each program, and the web UI will be available at `127.0.0.1:3000`. If you changed the port in the `docker-compose.yml`, use that port instead.
+It will launch each program, and the web UI will be available at `127.0.0.1:3000`. If you changed the port in the `docker-compose.yml`, use that port instead.
+
+In the web UI, in Settings, set the IP to `minecraft` if using Docker, which will automatically be wired into the contained `itzg` instance.
 
 ## Building from source
 
