@@ -1,33 +1,26 @@
 services:
   backend:
     build: ./backend
-    # no ports mapping: only nginx talks to the backend, and the browser
-    # reaches it through the /api and /hubs proxies on the frontend.
-    # rcon/status to host servers needs network_mode: "host" (see README);
-    # on the host network the compose service name has no dns, so nginx
-    # would proxy through the host gateway instead
+    
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://0.0.0.0:5029
-      # servers.json lives on the mounted volume so it survives rebuilds
       - SERVER_REGISTRY_PATH=/app/data/servers.json
-      # the registry stores host paths; the backend sees the mounted parent
-      # folder at MSM_SERVER_MOUNT and translates instance paths to it.
-      # set MSM_SERVER_ROOT to your host folder of server dirs
+      
+      # This flag must be set to the root folder of your server
+      # if your server is located at ~/Servers/VanillaServer, then
+      # set this to ~/Servers
       - MSM_SERVER_ROOT=/path/to/minecraft-servers
+
+      # Leave this as-is, as it's used internally by docker.
       - MSM_SERVER_MOUNT=/servers
-      # java for spawning servers comes from the host, so the container
-      # can run the flavor the server needs. mount a jdk and point java at it
-      # - /path/to/jdk-21:/opt/jdk
-      # - JAVA_HOME=/opt/jdk
     volumes:
+      # Leave this as-is
       - server-data:/app/data
-      # one parent mount covers every server folder under it; adding a
-      # server in the UI needs no compose change. set the host side to
-      # the same folder as MSM_SERVER_ROOT
+      
+      # This flag must be set to the same thing as MSM_SERVER_ROOT above.
       - /path/to/minecraft-servers:/servers
-    # healthcheck opens a tcp socket to the api with bash's builtin
-    # /dev/tcp, so the image needs no curl
+    
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5029"]
       interval: 30s
@@ -42,26 +35,34 @@ services:
       backend:
         condition: service_healthy
 
-  # a minecraft server as a container on the compose network. rcon/status
-  # from the backend reaches it by service name (bridge dns), no host
-  # networking involved, so it works on machines where container->host is
-  # firewalled. the server writes logs into the mounted folder, which the
-  # backend tails through the same parent mount.
-  # in the ui, the instance ip is the service name ("minecraft"), not 127.0.0.1.
   minecraft:
     image: itzg/minecraft-server
     environment:
+        # EULA must be true
       - EULA=TRUE
+
+        # Set the version to your preference. Note that newer versions drop the "1.--" prefix.
+        # If your entry doesn't work (e.g. 1.26.1), try dropping it (e.g. 26.1)
       - VERSION=1.21.4
+
+        # This must be true if you want the server manager to be able to send commands to the server.
+        # Make sure to enable RCON in your server.properties!
       - ENABLE_RCON=true
+
+        # Set this to the same value as the RCON PORT field in the server.properties.
+        # It is not recommended to set this port to the same port as the server, nor to any
+        # port that you are port forwarding.
       - RCON_PORT=25575
+
+        # Set this to the same password in the server.properties file.
       - RCON_PASSWORD=test_password
     volumes:
-      # a host server folder becomes the container's data dir; existing
-      # worlds, mods, and server.properties are used as-is
+
+        # Set this to the actual server path, not just the root.
       - /path/to/minecraft-servers/my-server:/data
     ports:
-      # optional: only needed to join the server from outside docker
+      # Set this to the port that you are port-forwarding and that others connect through.
+      # By default minecraft uses 25565
       - "25565:25565"
 
 volumes:
