@@ -20,6 +20,8 @@ services:
       
       # This flag must be set to the same thing as MSM_SERVER_ROOT above.
       - /path/to/minecraft-servers:/servers
+
+      # Note that JAVA is handled by the Minecraft docker instance below, so no java flag is required.
     
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5029"]
