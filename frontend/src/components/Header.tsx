@@ -53,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* start/stop + settings for the single server */}
             <div className="flex items-center gap-3">
+                {/*
                 <button
                     onClick={onStart}
                     disabled={!isStopped || !isConnected || !instance}
@@ -70,6 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <Square size={16} fill="currentColor" />
                     Stop Server
                 </button>
+                */}
 
                 <SettingsModal instance={instance} onSave={onSaveSettings} />
 
