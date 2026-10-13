@@ -11,7 +11,6 @@ export interface LogMessage {
 
 interface TerminalConsoleProps {
     logs: LogMessage[];
-    serverId: string;
     isConnected: boolean;
     onCommandExecution: (errorMessage: string) => void;
     onClearLogs?: () => void;
@@ -20,7 +19,6 @@ interface TerminalConsoleProps {
 
 export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
     logs,
-    serverId,
     onCommandExecution,
     onClearLogs,
     onRetrieveLogs,
@@ -155,7 +153,6 @@ export const TerminalConsole: React.FC<TerminalConsoleProps> = ({
 
             {/* Terminal Input Form */}
             <CommandInput
-                serverId={serverId}
                 onCommandExecution={onCommandExecution}
             />
         </div>

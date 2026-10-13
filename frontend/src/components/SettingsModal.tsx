@@ -9,7 +9,6 @@ interface SettingsModalProps {
 
 // the form template used when the registry is empty
 const blank: ServerInstance = {
-  id: '',
   name: '',
   serverDir: '',
   ip: '127.0.0.1',

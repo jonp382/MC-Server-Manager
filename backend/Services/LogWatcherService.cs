@@ -3,12 +3,11 @@ namespace MinecraftServerManager.Services;
 using Microsoft.AspNetCore.SignalR;
 using MinecraftServerManager.Hubs;
 using MinecraftServerManager.Models;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-// one watcher per server instance, reconciled against the registry
+// one watcher for the single server instance, reconciled against the registry
 public sealed class LogWatcherService : BackgroundService
 {
     private readonly IHubContext<ConsoleHub> _hubContext;
@@ -16,7 +15,7 @@ public sealed class LogWatcherService : BackgroundService
     private readonly ServerRegistry _registry;
     private readonly PathTranslator _paths;
 
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _watchers = new();
+    private CancellationTokenSource? _watcher;
     private CancellationToken _stoppingToken;
 
     public LogWatcherService(
@@ -42,7 +41,7 @@ public sealed class LogWatcherService : BackgroundService
             await Task.Delay(1000, stoppingToken);
         }
 
-        foreach (var cts in _watchers.Values) cts.Cancel();
+        _watcher?.Cancel();
         _registry.Changed -= Reconcile;
 
         _logger.LogInformation("LogWatcherService stopped.");
@@ -50,27 +49,21 @@ public sealed class LogWatcherService : BackgroundService
 
     private void Reconcile()
     {
-        var instances = _registry.GetAll().ToDictionary(i => i.Id);
+        var instance = _registry.GetAll().FirstOrDefault();
 
-        // stop watchers for removed instances
-        foreach (var id in _watchers.Keys.ToList())
+        // stop the watcher when the instance is removed
+        if (instance == null)
         {
-            if (!instances.ContainsKey(id))
-            {
-                _watchers[id].Cancel();
-                _watchers.TryRemove(id, out _);
-            }
+            _watcher?.Cancel();
+            _watcher = null;
+            return;
         }
 
-        // attach watchers for new instances
-        foreach (var instance in instances.Values)
-        {
-            if (_watchers.ContainsKey(instance.Id)) continue;
-
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
-            _watchers[instance.Id] = cts;
-            _ = WatchLoop(instance, cts.Token);
-        }
+        // restart the watcher when the instance is added or replaced
+        _watcher?.Cancel();
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
+        _watcher = cts;
+        _ = WatchLoop(instance, cts.Token);
     }
 
     private async Task WatchLoop(ServerInstance instance, CancellationToken token)
@@ -193,10 +186,9 @@ public sealed class LogWatcherService : BackgroundService
                             "[MC LOG] {Line}",
                             line);
 
-                        // lines carry the instance id so the frontend can filter by active server
+                        // broadcast the line to the frontend
                         await _hubContext.Clients.All.SendAsync(
                             "ReceiveLogLine",
-                            instance.Id,
                             line,
                             token);
                     }

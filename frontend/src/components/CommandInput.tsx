@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { sendCommand } from '../services/API'
 
 interface CommandInputProps {
-    serverId: string,
     onCommandExecution: (errorMessage: string) => void;
 }
 
 export const CommandInput: React.FC<CommandInputProps> = ({
-    serverId,
     onCommandExecution,
 }) => {
     // command history for up/down arrow
@@ -25,7 +23,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 
         try {
             // send command to back end via API post call
-            await sendCommand(onCommandExecution, trim, serverId);
+            await sendCommand(onCommandExecution, trim);
 
             // add command to history
             setHistory((prev) => (prev[prev.length - 1] === commandInput ? prev : [...prev, commandInput]));

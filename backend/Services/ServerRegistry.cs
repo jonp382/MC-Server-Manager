@@ -32,16 +32,10 @@ public class ServerRegistry
         lock (_lock) return _instance is null ? [] : new[] { _instance };
     }
 
-    public ServerInstance? Get(string id)
-    {
-        lock (_lock) return _instance?.Id == id ? _instance : null;
-    }
-
     public ServerInstance Create(ServerInstance instance)
     {
         lock (_lock)
         {
-            instance.Id = Guid.NewGuid().ToString("N");
             _instance = instance;
             Save();
         }
@@ -53,7 +47,7 @@ public class ServerRegistry
     {
         lock (_lock)
         {
-            if (_instance == null || _instance.Id != instance.Id) return false;
+            if (_instance == null) return false;
 
             _instance = instance;
             Save();
@@ -75,7 +69,6 @@ public class ServerRegistry
         {
             _instance = new ServerInstance
             {
-                Id = Guid.NewGuid().ToString("N"),
                 Name = "Default Server",
                 ServerDir = _config["Minecraft:ServerDir"]!,
                 Ip = _config["Minecraft:ServerIp"] ?? "127.0.0.1",

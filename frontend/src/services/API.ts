@@ -1,7 +1,6 @@
 const API_URL = '';
 
 export interface ServerInstance {
-  id: string;
   name: string;
   serverDir: string;
   ip: string;
@@ -39,30 +38,30 @@ export const updateServer = async (instance: ServerInstance): Promise<ServerInst
   return res.json();
 };
 
-export const fetchStatus = async (id: string): Promise<boolean> => {
-  const res = await fetch(`${API_URL}/api/server/status?id=${id}`);
+export const fetchStatus = async (): Promise<boolean> => {
+  const res = await fetch(`${API_URL}/api/server/status`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.isOnline;
 };
 
-export const fetchPlayers = async (id: string): Promise<string[]> => {
-  const res = await fetch(`${API_URL}/api/server/players?id=${id}`);
+export const fetchPlayers = async (): Promise<string[]> => {
+  const res = await fetch(`${API_URL}/api/server/players`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.onlinePlayers;
 };
 
-export const fetchLogs = async (id: string): Promise<string[]> => {
-  const res = await fetch(`${API_URL}/api/server/logs?id=${id}`);
+export const fetchLogs = async (): Promise<string[]> => {
+  const res = await fetch(`${API_URL}/api/server/logs`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.logs || [];
 };
 
-export const startServer = async (appendLog: (msg: string) => void, id: string) => {
+export const startServer = async (appendLog: (msg: string) => void) => {
   try {
-    const response = await fetch(`${API_URL}/api/server/start?id=${id}`, { method: 'POST' });
+    const response = await fetch(`${API_URL}/api/server/start`, { method: 'POST' });
     const data = await response.json();
 
     switch (response.status) {
@@ -82,12 +81,12 @@ export const startServer = async (appendLog: (msg: string) => void, id: string) 
   }
 };
 
-export const sendCommand = async (appendLog: (msg: string) => void, cmd: string, id: string) => {
+export const sendCommand = async (appendLog: (msg: string) => void, cmd: string) => {
   try {
     const response = await fetch(`${API_URL}/api/server/command`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serverId: id, command: cmd }),
+      body: JSON.stringify({ command: cmd }),
     });
 
     const data = await response.json();
@@ -101,7 +100,7 @@ export const sendCommand = async (appendLog: (msg: string) => void, cmd: string,
   }
 };
 
-export const stopServer = async (appendLog: (msg: string) => void, id: string) => {
+export const stopServer = async (appendLog: (msg: string) => void) => {
   appendLog('[SYSTEM] Stopping server...');
-  return sendCommand(appendLog, 'stop', id);
+  return sendCommand(appendLog, 'stop');
 };
