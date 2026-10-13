@@ -1,5 +1,4 @@
 import React from 'react';
-import { Play, Square } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { ServerInstance } from '../services/API';
 
@@ -16,12 +15,9 @@ export const Header: React.FC<HeaderProps> = ({
     instance,
     serverStatus,
     isConnected,
-    onStart,
-    onStop,
     onSaveSettings,
 }) => {
     const isRunning = serverStatus === 'Running';
-    const isStopped = serverStatus === 'Stopped';
 
     return (
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 mb-6 border-b border-slate-800 gap-4">
