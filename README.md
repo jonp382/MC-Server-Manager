@@ -27,9 +27,12 @@ To set the program up via Docker, first review the `docker-compose.yml` file.
   * `VERSION`: Change to whatever minecraft version you want. Note that Mojang dropped the `1.xx.xx` prefix on their latest versions (e.g. `1.21.1` before, just `26.1` now).
 
 
-Once these have been configured, in a terminal, run 
-
-```docker compose up -d```
+Once these have been configured:
+* Initial Run:
+  * `docker compose up --build -d`
+  
+* Thereafter:
+  * `docker compose up -d`
 
 It will launch each program, and the web UI will be available at `127.0.0.1:3000`. If you changed the port in the `docker-compose.yml`, use that port instead.
 
