@@ -40,7 +40,8 @@ services:
   minecraft:
     image: itzg/minecraft-server
     environment:
-        # EULA must be true
+        # EULA must be true to launch the server. Please note that by setting this to TRUE and
+        # running the docker image, you accept the Minecraft EULA (https://www.minecraft.net/en-us/eula)
       - EULA=TRUE
 
         # Set the version to your preference. Note that newer versions drop the "1.--" prefix.
