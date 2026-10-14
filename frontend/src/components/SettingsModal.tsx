@@ -109,13 +109,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
                   type="text"
                   value={formState.ip}
                   onChange={(e) => setFormState({ ...formState, ip: e.target.value })}
-                  placeholder="127.0.0.1"
+                  placeholder="minecraft"
                   required
                   pattern="^[A-Za-z0-9.\-:]+$"
                   title="ip address or hostname, e.g. 127.0.0.1, localhost, mc.example.com"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
                 />
-                <p className="text-slate-500 mt-1">where the server lives. defaults to 127.0.0.1</p>
+                <p className="text-slate-500 mt-1">Docker users should enter "minecraft" here. Non-docker local servers should use localhost or 127.0.0.1</p>
               </div>
 
               {/* query port */}
@@ -131,6 +131,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
                   required
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
                 />
+
+                <p className="text-slate-500 mt-1">Ensure that enable-query is set to true in server.properties, and the ports match.</p>
               </div>
 
               {/* RCON port */}
@@ -146,6 +148,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
                   required
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
                 />
+
+                <p className="text-slate-500 mt-1">Ensure that enable-rcon is set to true in server.properties, and the ports match.</p>
               </div>
 
               {/* RCON password */}
@@ -171,6 +175,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ instance, onSave }
                     {showRconPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p className="text-slate-500 mt-1">Ensure that this exactly matches the password in server.properties (case-sentitive!)</p>
               </div>
 
               {/* action buttons */}
