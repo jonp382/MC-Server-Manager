@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -15,8 +14,8 @@ public class ServerProcessService
 {
     private const int LogsToStore = 500;
 
-    // per-instance flag, set on start, cleared on stop. the query service is the real source of online truth.
-    private readonly ConcurrentDictionary<string, bool> _running = new();
+    // single-server flag, set on start, cleared on stop. the query service is the real source of online truth.
+    private volatile bool _running;
     private readonly PathTranslator _paths;
 
     public ServerProcessService(PathTranslator paths)
@@ -24,7 +23,7 @@ public class ServerProcessService
         _paths = paths;
     }
 
-    public bool IsRunning(ServerInstance instance) => _running.TryGetValue(instance.Id, out var running) && running;
+    public bool IsRunning(ServerInstance instance) => _running;
 
     public Task<bool> StartServer(ServerInstance instance)
     {
@@ -66,7 +65,7 @@ public class ServerProcessService
         }
 
         Debug.WriteLine($"Process started successfully for {instance.Name}.");
-        _running[instance.Id] = true;
+        _running = true;
         return Task.FromResult(true);
     }
 
@@ -87,7 +86,7 @@ public class ServerProcessService
         await rcon.ConnectAsync();
         var response = await rcon.SendCommandAsync(command);
 
-        if (command.Trim() == "stop") _running[instance.Id] = false;
+        if (command.Trim() == "stop") _running = false;
 
         return response;
     }

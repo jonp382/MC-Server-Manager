@@ -29,7 +29,6 @@ export default function App() {
 
   // the single server instance from the registry
   const [instance, setInstance] = useState<ServerInstance | null>(null);
-  const activeId = instance?.id ?? '';
 
   const [logs, setLogs] = useState<LogMessage[]>([]);
 
@@ -72,8 +71,8 @@ export default function App() {
         setIsConnected(true);
         console.log('Connected to SignalR ConsoleHub');
 
-        // Console Log Stream, lines arrive tagged with the server they came from
-        connection.on('ReceiveLogLine', (_serverId: string, line: string) => {
+        // Console Log Stream
+        connection.on('ReceiveLogLine', (line: string) => {
           appendLog(line);
         });
 
@@ -106,9 +105,9 @@ export default function App() {
   }, [connection]);
 
   const fetchServerStatus = async () => {
-    if (!activeId) return;
+    if (!instance) return;
     try {
-      const online = await fetchStatus(activeId);
+      const online = await fetchStatus();
       setServerStatus(online ? 'Running' : 'Stopped');
     } catch (err) {
       console.error('Error fetching server status:', err);
@@ -117,9 +116,9 @@ export default function App() {
   };
 
   const fetchCurrentPlayers = async () => {
-    if (!activeId) return;
+    if (!instance) return;
     try {
-      const list = await fetchPlayers(activeId);
+      const list = await fetchPlayers();
       setPlayers(list);
     } catch (err) {
       console.error('Error fetching players:', err);
@@ -130,12 +129,12 @@ export default function App() {
   useEffect(() => {
     fetchServerStatus();
     fetchCurrentPlayers();
-  }, [activeId]);
+  }, [instance]);
 
   // settings save: writes back to the instance, or creates it when the registry is empty
   const handleSaveSettings = async (saved: ServerInstance) => {
     try {
-      const result = saved.id ? await updateServer(saved) : await createServer(saved);
+      const result = instance ? await updateServer(saved) : await createServer(saved);
       setInstance(result);
     } catch (err) {
       console.error('Failed to save server:', err);
@@ -143,9 +142,9 @@ export default function App() {
   };
 
   const handleRetrieveLogs = async () => {
-    if (!activeId) return;
+    if (!instance) return;
     try {
-      const rawLogs = await fetchLogs(activeId);
+      const rawLogs = await fetchLogs();
 
       const parsedLogs: LogMessage[] = rawLogs.map((logText, index) => ({
         id: `${Date.now()}-${index}`,
@@ -170,7 +169,7 @@ export default function App() {
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, [activeId]);
+  }, [instance]);
 
   return (
     <div className="bg-slate-950 text-slate-100 p-6 w-screen h-screen font-sans overflow-hidden">
@@ -178,15 +177,14 @@ export default function App() {
         instance={instance}
         serverStatus={serverStatus}
         isConnected={isConnected}
-        onStart={() => startServer((msg) => appendLog(msg), activeId)}
-        onStop={() => stopServer((msg) => appendLog(msg), activeId)}
+        onStart={() => startServer((msg) => appendLog(msg))}
+        onStop={() => stopServer((msg) => appendLog(msg))}
         onSaveSettings={handleSaveSettings}
       />
 
       <div className="gap-6 flex-1 min-h-0">
         <TerminalConsole
           logs={logs}
-          serverId={activeId}
           isConnected={isConnected}
           onCommandExecution={(errText) => appendLog(errText)}
           onClearLogs={onClearLogs}

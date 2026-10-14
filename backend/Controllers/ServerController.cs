@@ -4,7 +4,7 @@ using MinecraftServerManager.Services;
 
 namespace MinecraftServerManager.Controllers;
 
-public record CommandRequest(string ServerId, string Command);
+public record CommandRequest(string Command);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -36,17 +36,17 @@ public class ServerController : ControllerBase
     public IActionResult UpdateServer([FromBody] ServerInstance instance)
     {
         if (!_registry.Update(instance))
-            return NotFound(new { error = $"server {instance.Id} not found" });
+            return NotFound(new { error = "no server configured" });
         return Ok(instance);
     }
 
-    private ServerInstance? Resolve(string id) => _registry.Get(id);
+    private ServerInstance? Current() => _registry.GetAll().FirstOrDefault();
 
     [HttpGet("status")]
-    public async Task<IActionResult> GetStatus(string id)
+    public async Task<IActionResult> GetStatus()
     {
-        var instance = Resolve(id);
-        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+        var instance = Current();
+        if (instance == null) return NotFound(new { error = "no server configured" });
 
         try
         {
@@ -60,10 +60,10 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("logs")]
-    public IActionResult GetLogs(string id)
+    public IActionResult GetLogs()
     {
-        var instance = Resolve(id);
-        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+        var instance = Current();
+        if (instance == null) return NotFound(new { error = "no server configured" });
 
         try
         {
@@ -77,10 +77,10 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("players")]
-    public async Task<IActionResult> GetPlayers(string id)
+    public async Task<IActionResult> GetPlayers()
     {
-        var instance = Resolve(id);
-        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+        var instance = Current();
+        if (instance == null) return NotFound(new { error = "no server configured" });
 
         try
         {
@@ -96,8 +96,8 @@ public class ServerController : ControllerBase
     [HttpPost("command")]
     public async Task<IActionResult> SendCommand([FromBody] CommandRequest req)
     {
-        var instance = Resolve(req.ServerId);
-        if (instance == null) return NotFound(new { success = false, error = $"server {req.ServerId} not found" });
+        var instance = Current();
+        if (instance == null) return NotFound(new { success = false, error = "no server configured" });
 
         try
         {
@@ -112,10 +112,10 @@ public class ServerController : ControllerBase
     }
 
     [HttpPost("start")]
-    public async Task<IActionResult> StartServer(string id)
+    public async Task<IActionResult> StartServer()
     {
-        var instance = Resolve(id);
-        if (instance == null) return NotFound(new { error = $"server {id} not found" });
+        var instance = Current();
+        if (instance == null) return NotFound(new { error = "no server configured" });
 
         try
         {
