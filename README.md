@@ -2,11 +2,18 @@
 
 A web UI for managing local Minecraft servers that run on their own.
 
+<img width="2544" height="1168" alt="image" src="https://github.com/user-attachments/assets/fa6dbe09-15ac-4045-938a-2ea7b4d12149" />
+
+<img width="510" height="757" alt="image" src="https://github.com/user-attachments/assets/8ae2c988-5d6a-4574-8bec-80aba2e08452" />
+
+
 ## Features
 - Live output of the server log, and a sync feature if the window is later refreshed
 - Shows online players
+- Send commands and receive output via RCON
 - Filters the console by log level (info, warn, error) with counts.
-- Command history in the input box (up/down arrows).
+- Supports any minecraft version with Docker via _minecraft-itzg_
+  - Which works for both existing and brand new servers, and both modded and vanilla servers.
 
 ## Running with Docker
 
@@ -62,3 +69,9 @@ In dev, Vite proxies `/api` and `/hubs` to the backend, so the frontend uses rel
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+This project is not affiliated with or endorsed by Mojang Studios or Microsoft. The minecraft server software is downloaded by the itzg image from Mojang's authorized sources. Users are responsible for complying with the Minecraft EULA.
+
+## Credits
+
+Thanks to Geoff Bourne (itzg) for their excellent minecraft server docker image (see [here](https://github.com/itzg/docker-minecraft-server)) 
